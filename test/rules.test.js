@@ -14,6 +14,8 @@ import { CowrieDice } from "../src/game/cowries.js";
 import { getPlayerPath, isSafeSquare } from "../src/game/board.js";
 import { UserManager, computeNickName } from "../src/game/userManager.js";
 import { wallet } from "../src/game/wallet.js";
+import { generateUniqueBoardNumber, normalizeBoardNumber } from "../src/game/multiplayerClient.js";
+import { renderCuppedPalm, renderCowrieArea } from "../src/components/CowrieShellsView.js";
 
 function runTests() {
   console.log("=== BHARAKHATTA AUTOMATED TEST SUITE ===\n");
@@ -242,6 +244,81 @@ function runTests() {
   assert(loginAgain.user.nickName === "MR", "Existing user retains nickname 'MR'");
   assert(wallet.getBalance() === 1500, "Existing user restores previous wallet balance (1500)");
   assert(um.getHistory(user1Mobile).length === 1, "Existing user maintains complete match history");
+
+  // 11. Test Guaranteed Non-Repeating Board Numbers
+  console.log("\n--- Test 11: Guaranteed Unique Board Numbers ---");
+  const bn1 = generateUniqueBoardNumber();
+  assert(bn1.startsWith("BK-"), "Board number begins with 'BK-' prefix");
+  assert(/^BK-\d{6}-\d+-\d{3}$/.test(bn1), "Board number format matches BK-YYMMDD-COUNTER-ENTROPY");
+
+  // Test that 1,000 generated board numbers are 100% unique (zero collisions)
+  const boardSet = new Set();
+  let collisions = 0;
+  for (let i = 0; i < 1000; i++) {
+    const num = generateUniqueBoardNumber();
+    if (boardSet.has(num)) {
+      collisions++;
+    }
+    boardSet.add(num);
+  }
+  assert(collisions === 0 && boardSet.size === 1000, "1,000 consecutively generated board numbers have 0 collisions (100% unique lifetime match IDs)");
+
+  // Test normalizeBoardNumber
+  assert(normalizeBoardNumber("BK-260915-101-482") === "BK-260915-101-482", "Normalizes exact code");
+  assert(normalizeBoardNumber("260915-101-482") === "BK-260915-101-482", "Prepends BK- if omitted");
+  assert(normalizeBoardNumber(" bk-260915 ") === "BK-260915", "Uppercases and trims");
+
+  // 12. Test 4-Player Mode with AI Opposite Pair
+  console.log("\n--- Test 12: 4-Player AI Opposite Pair Mode ---");
+  // Team 1: Player 1 (Human) & Player 3 (Human Friend)
+  // Team 2: Player 2 (System AI) & Player 4 (System AI) as opposite pair
+  const engine4p = new BharakhattaEngine({ gameMode: "4p" });
+  engine4p.initGame([
+    { id: 1, team: 1, name: "Host (You)", avatar: "👑", color: "#e67e22", isAI: false },
+    { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
+    { id: 3, team: 1, name: "Friend (You)", avatar: "🦁", color: "#d35400", isAI: false },
+    { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
+  ]);
+
+  assert(engine4p.players.length === 4, "4 players initialized in engine");
+  assert(engine4p.players[0].team === 1 && !engine4p.players[0].isAI, "Player 1 is Human on Team 1");
+  assert(engine4p.players[1].team === 2 && engine4p.players[1].isAI, "Player 2 is System AI on Team 2 (Opposite Pair)");
+  assert(engine4p.players[2].team === 1 && !engine4p.players[2].isAI, "Player 3 is Human Friend on Team 1 (Teammate)");
+  assert(engine4p.players[3].team === 2 && engine4p.players[3].isAI, "Player 4 is System AI on Team 2 (Opposite Pair)");
+
+  // Verify turn alternation
+  assert(engine4p.getCurrentPlayer().id === 1, "Turn starts with Player 1 (Team 1)");
+  engine4p.advanceTurn();
+  assert(engine4p.getCurrentPlayer().id === 2, "Turn 2 passes to Player 2 (System AI, Team 2)");
+  assert(engine4p.getCurrentPlayer().isAI === true, "Player 2 is recognized as AI");
+  engine4p.advanceTurn();
+  assert(engine4p.getCurrentPlayer().id === 3, "Turn 3 passes to Player 3 (Friend, Team 1)");
+  assert(engine4p.getCurrentPlayer().isAI === false, "Player 3 is recognized as Human");
+  engine4p.advanceTurn();
+  assert(engine4p.getCurrentPlayer().id === 4, "Turn 4 passes to Player 4 (System AI, Team 2)");
+  assert(engine4p.getCurrentPlayer().isAI === true, "Player 4 is recognized as AI");
+  engine4p.advanceTurn();
+  assert(engine4p.getCurrentPlayer().id === 1, "Turn wraps back to Player 1 (Team 1)");
+
+  // 13. Test Cupped Palm Cowrie Toss Rendering
+  console.log("\n--- Test 13: Cupped Palm Cowrie Toss View ---");
+  const testShells = [
+    { id: 0, isOpen: true },
+    { id: 1, isOpen: false },
+    { id: 2, isOpen: true },
+    { id: 3, isOpen: false },
+    { id: 4, isOpen: true },
+    { id: 5, isOpen: true }
+  ];
+  const palmHtml = renderCuppedPalm(testShells, false, true, true);
+  assert(palmHtml.includes("palm-cupped-box"), "Palm container rendered with palm-cupped-box id");
+  assert(palmHtml.includes("cupped-palm-svg"), "Cupped palm SVG graphic present");
+  assert(palmHtml.includes("Guvvalu in Palm"), "Prompt shows Guvvalu in Palm");
+  assert(palmHtml.includes("nestled-shell"), "Cowrie shells nestled inside cupped palm cavity");
+
+  const shakingPalmHtml = renderCuppedPalm(testShells, true, false, true);
+  assert(shakingPalmHtml.includes("hands-shaking-toss"), "Shaking animation active during roll toss");
+  assert(shakingPalmHtml.includes("shells-flying-out"), "Shells fly out animation active during toss");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);

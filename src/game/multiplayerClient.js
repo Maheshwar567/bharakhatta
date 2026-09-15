@@ -4,6 +4,54 @@
 import PeerModule from "peerjs";
 const Peer = PeerModule.Peer || PeerModule.default || PeerModule;
 
+// Guaranteed Non-Repeating Board Number Generator
+// Generates persistent IDs like BK-260915-101-482 that never repeat in match history
+export function generateUniqueBoardNumber() {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const datePrefix = `BK-${yy}${mm}${dd}`;
+
+  let seq = 101;
+  try {
+    const savedSeq = localStorage.getItem("bk_board_seq");
+    if (savedSeq) {
+      seq = parseInt(savedSeq, 10) + 1;
+    }
+    localStorage.setItem("bk_board_seq", String(seq));
+  } catch (_) {
+    seq = Math.floor(100 + Math.random() * 900);
+  }
+
+  let entropy = Math.floor(100 + Math.random() * 900);
+  let boardNumber = `${datePrefix}-${seq}-${entropy}`;
+
+  try {
+    let used = JSON.parse(localStorage.getItem("bk_used_board_numbers") || "[]");
+    while (used.includes(boardNumber)) {
+      seq++;
+      entropy = Math.floor(100 + Math.random() * 900);
+      boardNumber = `${datePrefix}-${seq}-${entropy}`;
+    }
+    used.push(boardNumber);
+    if (used.length > 1000) used = used.slice(-1000);
+    localStorage.setItem("bk_used_board_numbers", JSON.stringify(used));
+    localStorage.setItem("bk_board_seq", String(seq));
+  } catch (_) {}
+
+  return boardNumber;
+}
+
+export function normalizeBoardNumber(rawCode) {
+  if (!rawCode) return "";
+  let clean = rawCode.trim().toUpperCase().replace(/\s+/g, "");
+  if (!clean.startsWith("BK-") && !clean.startsWith("BK")) {
+    clean = `BK-${clean}`;
+  }
+  return clean;
+}
+
 export class MultiplayerClient {
   constructor(options = {}) {
     this.ws = null;
@@ -28,9 +76,11 @@ export class MultiplayerClient {
     this.onChatReceived = options.onChatReceived || (() => {});
     this.onBetSynced = options.onBetSynced || (() => {});
     this.onSyncTimeoutPass = options.onSyncTimeoutPass || (() => {});
+    this.onStart4pAIPair = options.onStart4pAIPair || (() => {});
     this.onError = options.onError || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
     this.currentBet = 250;
+    this.gameMode = "2p";
   }
 
   isP2PPreferred() {
@@ -91,6 +141,7 @@ export class MultiplayerClient {
         this.myPlayerId = msg.playerId;
         this.myTeam = msg.team;
         this.isHost = true;
+        this.gameMode = msg.mode || "2p";
         this.onRoomCreated(msg);
         break;
 
@@ -99,6 +150,7 @@ export class MultiplayerClient {
         this.myPlayerId = msg.playerId;
         this.myTeam = msg.team;
         this.isHost = false;
+        this.gameMode = msg.mode || "2p";
         this.onRoomJoined(msg);
         break;
 
@@ -135,6 +187,10 @@ export class MultiplayerClient {
         this.onSyncTimeoutPass(msg);
         break;
 
+      case "START_4P_AI_PAIR":
+        this.onStart4pAIPair(msg);
+        break;
+
       case "ERROR":
         this.onError(msg.message);
         break;
@@ -143,6 +199,7 @@ export class MultiplayerClient {
 
   async createRoom(mode = "2p", playerName = "Player 1") {
     this.hostName = playerName;
+    this.gameMode = mode;
 
     // Check if we should use P2P or WS
     if (!this.isP2PPreferred()) {
@@ -155,10 +212,10 @@ export class MultiplayerClient {
       }
     }
 
-    // WebRTC P2P Mode via PeerJS
+    // WebRTC P2P Mode via PeerJS with Guaranteed Non-Repeating Board Number
     this.mode = "p2p";
-    const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const peerId = `bk-room-${roomCode}`;
+    const roomCode = generateUniqueBoardNumber();
+    const peerId = `bk-board-${roomCode.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
 
     if (this.peer) {
       try { this.peer.destroy(); } catch (_) {}
@@ -177,7 +234,8 @@ export class MultiplayerClient {
         roomCode,
         playerId: 1,
         team: 1,
-        players: [{ id: 1, team: 1, name: playerName }]
+        mode,
+        players: [{ id: 1, team: 1, name: playerName, isHost: true }]
       });
     });
 
@@ -191,19 +249,24 @@ export class MultiplayerClient {
       conn.on("data", (data) => {
         if (data.type === "JOIN_ROOM") {
           this.guestName = data.playerName || "Player 2";
+          // In 4P mode, friend joins Team 1 as partner (Player 3), with Players 2 & 4 as System AI opposite pair
+          const is4p = this.gameMode === "4p";
+          const guestId = is4p ? 3 : 2;
+          const guestTeam = is4p ? 1 : 2;
           const players = [
-            { id: 1, team: 1, name: this.hostName },
-            { id: 2, team: 2, name: this.guestName }
+            { id: 1, team: 1, name: this.hostName, isHost: true },
+            { id: guestId, team: guestTeam, name: this.guestName, isHost: false }
           ];
           conn.send({
             type: "ROOM_JOINED",
             roomCode,
-            playerId: 2,
-            team: 2,
+            playerId: guestId,
+            team: guestTeam,
+            mode: this.gameMode,
             players,
             bet: this.currentBet
           });
-          this.onPlayerJoined({ id: 2, team: 2, name: this.guestName }, players);
+          this.onPlayerJoined({ id: guestId, team: guestTeam, name: this.guestName }, players);
         } else {
           this.handleMessage(data);
         }
@@ -217,7 +280,7 @@ export class MultiplayerClient {
     this.peer.on("error", (err) => {
       console.error("PeerJS Host error:", err);
       if (err.type === "unavailable-id") {
-        // Retry with new code
+        // Retry with new guaranteed unique code
         this.createRoom(mode, playerName);
       } else {
         this.onError(`Network error: ${err.message || err.type}`);
@@ -227,11 +290,12 @@ export class MultiplayerClient {
 
   async joinRoom(roomCode, playerName = "Player 2") {
     this.guestName = playerName;
+    const cleanCode = normalizeBoardNumber(roomCode);
 
     if (!this.isP2PPreferred()) {
       try {
         await this.connectWS();
-        this.send({ type: "JOIN_ROOM", roomCode, playerName });
+        this.send({ type: "JOIN_ROOM", roomCode: cleanCode, playerName });
         return;
       } catch (e) {
         console.log("WS failed, switching to P2P WebRTC:", e);
@@ -247,7 +311,7 @@ export class MultiplayerClient {
     this.peer = new Peer();
 
     this.peer.on("open", () => {
-      const targetPeerId = `bk-room-${roomCode}`;
+      const targetPeerId = `bk-board-${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
       const conn = this.peer.connect(targetPeerId, { reliable: true });
       this.peerConn = conn;
 
@@ -256,7 +320,7 @@ export class MultiplayerClient {
         this.onStatusChange("connected");
         conn.send({
           type: "JOIN_ROOM",
-          roomCode,
+          roomCode: cleanCode,
           playerName
         });
       });
@@ -274,7 +338,16 @@ export class MultiplayerClient {
 
     this.peer.on("error", (err) => {
       console.error("PeerJS Guest error:", err);
-      this.onError(`Could not join Room #${roomCode}. Please ensure host is waiting and try again.`);
+      this.onError(`Could not join Board #${cleanCode}. Please ensure host is waiting and try again.`);
+    });
+  }
+
+  sendStart4pAIPair() {
+    if (!this.roomCode) return;
+    this.send({
+      type: "START_4P_AI_PAIR",
+      roomCode: this.roomCode,
+      bet: this.currentBet
     });
   }
 

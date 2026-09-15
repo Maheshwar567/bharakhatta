@@ -1,4 +1,4 @@
-// Visual component for 6 Cowrie Shells (Guvvalu) - Single Screen Mobile Optimized
+// Visual component for 6 Cowrie Shells (Guvvalu) with Cupped Palm Toss - Single Screen Mobile Optimized
 
 export function renderCowrieShell(shell, isRolling) {
   const isOpen = shell.isOpen;
@@ -57,6 +57,81 @@ export function renderCowrieShell(shell, isRolling) {
   `;
 }
 
+export function renderCuppedPalm(shells, isRolling, canRoll, isMyTurn) {
+  return `
+    <div class="palm-toss-stage ${isRolling ? 'palm-state-tossing' : 'palm-state-cupped'} ${canRoll ? 'palm-clickable' : ''}" 
+         id="palm-cupped-box" 
+         title="${canRoll ? 'Tap palm to shake and toss guvvalu on board!' : ''}">
+      
+      <!-- Authentic Village Cupped Hands Graphic -->
+      <div class="cupped-hands-graphic ${isRolling ? 'hands-shaking-toss' : ''}">
+        <svg viewBox="0 0 160 110" class="cupped-palm-svg">
+          <defs>
+            <radialGradient id="palmShadow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#2a1607" stop-opacity="0.95" />
+              <stop offset="70%" stop-color="#422510" stop-opacity="0.7" />
+              <stop offset="100%" stop-color="#1a0b04" stop-opacity="0" />
+            </radialGradient>
+            <linearGradient id="handSkinLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f7d4aa" />
+              <stop offset="50%" stop-color="#d49a6a" />
+              <stop offset="100%" stop-color="#9a5a2e" />
+            </linearGradient>
+            <linearGradient id="handSkinRight" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#f7d4aa" />
+              <stop offset="50%" stop-color="#d49a6a" />
+              <stop offset="100%" stop-color="#9a5a2e" />
+            </linearGradient>
+          </defs>
+
+          <!-- Deep Palm Cavity Shadow where Guvvalu are cupped -->
+          <ellipse cx="80" cy="56" rx="48" ry="30" fill="url(#palmShadow)" />
+
+          <!-- Left Hand Palm & Curved Fingers -->
+          <path d="M 32,86 C 18,72 16,48 28,32 C 38,20 54,22 60,34 C 66,46 64,66 54,84 C 46,92 38,94 32,86 Z" 
+                fill="url(#handSkinLeft)" stroke="#5a2f12" stroke-width="2" />
+          <path d="M 46,26 C 52,16 66,16 70,26 C 74,38 70,54 58,64" 
+                fill="none" stroke="#5a2f12" stroke-width="1.8" stroke-linecap="round" />
+          <path d="M 28,40 C 22,32 32,20 44,24" 
+                fill="none" stroke="#7a411b" stroke-width="1.5" stroke-linecap="round" />
+
+          <!-- Right Hand Palm & Curved Fingers (Cupping together) -->
+          <path d="M 128,86 C 142,72 144,48 132,32 C 122,20 106,22 100,34 C 94,46 96,66 106,84 C 114,92 122,94 128,86 Z" 
+                fill="url(#handSkinRight)" stroke="#5a2f12" stroke-width="2" />
+          <path d="M 114,26 C 108,16 94,16 90,26 C 86,38 90,54 102,64" 
+                fill="none" stroke="#5a2f12" stroke-width="1.8" stroke-linecap="round" />
+          <path d="M 132,40 C 138,32 128,20 116,24" 
+                fill="none" stroke="#7a411b" stroke-width="1.5" stroke-linecap="round" />
+
+          <!-- Joined Wrists at Bottom -->
+          <path d="M 46,88 Q 80,108 114,88 Q 80,96 46,88 Z" 
+                fill="#7a411b" stroke="#46220a" stroke-width="1.8" />
+        </svg>
+
+        <!-- 6 Cowrie Shells Nestled Inside Palm -->
+        <div class="palm-shells-nest ${isRolling ? 'shells-flying-out' : ''}">
+          ${shells.map((s, idx) => {
+            const nestX = [-18, 14, -6, 16, -12, 4][idx] || 0;
+            const nestY = [-6, -6, 6, 8, 14, 0][idx] || 0;
+            const nestRot = [-15, 20, -8, 14, 25, -20][idx] || 0;
+            return `
+              <div class="nestled-shell shell-pos-${idx}" style="transform: translate(${nestX}px, ${nestY}px) rotate(${nestRot}deg);">
+                ${renderCowrieShell(s, isRolling)}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Village Cupped Palm Interaction Prompt -->
+      <div class="palm-prompt-badge ${canRoll ? 'pulse-gold' : ''}">
+        <span class="palm-prompt-icon">🤲</span>
+        <span class="palm-prompt-text">${canRoll ? 'Guvvalu in Palm — Tap to Toss!' : isRolling ? 'Shaking & Tossing...' : 'Guvvalu in Palm'}</span>
+      </div>
+    </div>
+  `;
+}
+
 export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
   const { status, currentRoll, diceMode, currentPlayer } = gameState;
   const isRolling = status === "ROLLING";
@@ -91,11 +166,21 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
           { id: 5, isOpen: true, rot: -25, x: 1, y: -2 }
         ];
 
-    shellsHtml = `
-      <div class="compact-cowrie-tray ${isRolling ? "mat-shaking" : ""}">
-        ${shells.map(s => renderCowrieShell(s, isRolling)).join("")}
-      </div>
-    `;
+    // Palm Cowrie Toss View:
+    // If waiting to roll or actively rolling: show cowries hidden inside the cupped palm!
+    if (status === "WAITING_FOR_ROLL" || isRolling) {
+      shellsHtml = renderCuppedPalm(shells, isRolling, canRoll, isMyTurn);
+    } else {
+      // Settled on the board mat after toss
+      shellsHtml = `
+        <div class="settled-cowrie-mat">
+          <div class="mat-label">🌾 Tossed on Board Mat</div>
+          <div class="compact-cowrie-tray">
+            ${shells.map(s => renderCowrieShell(s, false)).join("")}
+          </div>
+        </div>
+      `;
+    }
   }
 
   // Score & status display
@@ -115,7 +200,7 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
     scoreBadgeHtml = `
       <div class="compact-score-badge rolling-badge">
         <span class="rolling-dot">⏳</span>
-        <span>Rolling...</span>
+        <span>Tossing from Palm...</span>
       </div>
     `;
   } else {
@@ -128,7 +213,7 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
   }
 
   // Button text
-  let rollBtnText = "🎲 ROLL GUVVALU";
+  let rollBtnText = "🤲 TOSS GUVVALU";
   if (isRolling) rollBtnText = "Tossing...";
   else if (!isMyTurn) {
     rollBtnText = mpState && mpState.roomCode ? `Waiting for ${currentPlayer.name}...` : "Computer Thinking...";
@@ -150,3 +235,4 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
     </div>
   `;
 }
+

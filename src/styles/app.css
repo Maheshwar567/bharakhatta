@@ -2629,4 +2629,427 @@ body {
   border-color: #ffd700;
 }
 
+/* =================================================================
+   AUTHENTIC VILLAGE CUPPED PALM COWRIE TOSS
+   ================================================================= */
+.palm-toss-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at center, rgba(82, 45, 23, 0.3) 0%, rgba(20, 10, 5, 0.4) 100%);
+  border: 1px dashed rgba(243, 156, 18, 0.3);
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.palm-clickable {
+  cursor: pointer;
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.35);
+}
+
+.palm-clickable:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 18px rgba(243, 156, 18, 0.6);
+  border-color: #ffeaa7;
+}
+
+.cupped-hands-graphic {
+  position: relative;
+  width: 145px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cupped-palm-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.palm-shells-nest {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 75px;
+  height: 50px;
+  pointer-events: none;
+}
+
+.nestled-shell {
+  position: absolute;
+  width: 32px;
+  height: 48px;
+  transition: all 0.4s ease;
+}
+
+.nestled-shell .cowrie-shell-wrapper {
+  width: 30px;
+  height: 45px;
+}
+
+/* Palm Shaking and Tossing Animations */
+.hands-shaking-toss {
+  animation: palmRattle 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes palmRattle {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  15% { transform: translate(-8px, -4px) rotate(-8deg) scale(1.04); }
+  30% { transform: translate(8px, 2px) rotate(7deg) scale(1.06); }
+  45% { transform: translate(-9px, -2px) rotate(-6deg) scale(1.08); }
+  60% { transform: translate(7px, 3px) rotate(5deg) scale(1.07); }
+  75% { transform: translate(-4px, -1px) rotate(-3deg) scale(1.05); }
+  90% { transform: translate(0, -6px) rotate(0deg) scale(1.12); }
+  100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+}
+
+.shells-flying-out {
+  animation: shellsScatter 0.65s ease-out both;
+}
+
+@keyframes shellsScatter {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-50%, -85%) scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.palm-prompt-badge {
+  margin-top: 4px;
+  padding: 3px 10px;
+  background: rgba(44, 26, 16, 0.92);
+  border: 1px solid #c0a875;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff9e6;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pulse-gold {
+  animation: pulseGoldBadge 1.4s infinite ease-in-out;
+}
+
+@keyframes pulseGoldBadge {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(243, 156, 18, 0.4);
+    border-color: #c0a875;
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(243, 156, 18, 0.85);
+    border-color: #ffd700;
+  }
+}
+
+.settled-cowrie-mat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mat-label {
+  font-size: 10px;
+  color: #e5c388;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* =================================================================
+   PLAYER COUNT (2 OR 4) SELECTION & LOBBY UPGRADES
+   ================================================================= */
+.player-count-toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.btn-player-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(44, 26, 16, 0.85);
+  border: 2px solid #5a351e;
+  border-radius: 12px;
+  color: #f5eedc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.btn-player-count:hover {
+  border-color: #d4a359;
+  background: rgba(60, 36, 22, 0.95);
+}
+
+.btn-player-count.count-active {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, rgba(82, 45, 23, 0.95), rgba(138, 77, 30, 0.85));
+  box-shadow: 0 0 14px rgba(243, 156, 18, 0.45);
+}
+
+.count-icon {
+  font-size: 24px;
+}
+
+.count-text strong {
+  display: block;
+  font-size: 13px;
+  color: #fff9ea;
+}
+
+.count-text span {
+  font-size: 10.5px;
+  color: #c9b08f;
+}
+
+.count-check {
+  margin-left: auto;
+  font-size: 15px;
+  color: #2ecc71;
+  font-weight: 900;
+}
+
+.mode-grid-3 {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+@media (max-width: 480px) {
+  .mode-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Prominent Request Friend Hero Banner */
+.request-friend-banner {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.btn-request-friend-hero {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #1b5e20 100%);
+  border: 1.5px solid #81c784;
+  border-radius: 12px;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(27, 94, 32, 0.5);
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.btn-request-friend-hero:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.7);
+  border-color: #a5d6a7;
+}
+
+.rf-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.rf-content {
+  flex: 1;
+}
+
+.rf-content strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+}
+
+.rf-content span {
+  font-size: 10.5px;
+  color: #c8e6c9;
+}
+
+.rf-arrow {
+  font-size: 18px;
+  color: #a5d6a7;
+}
+
+/* =================================================================
+   BOARD NUMBER HERO CARD & WHATSAPP SHARE
+   ================================================================= */
+.board-number-hero-card {
+  background: linear-gradient(135deg, rgba(66, 37, 16, 0.95), rgba(42, 22, 9, 0.98));
+  border: 2px solid #f39c12;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(243, 156, 18, 0.2);
+  margin-bottom: 12px;
+}
+
+.bn-badge-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #f39c12;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.bn-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 4px 0 8px 0;
+}
+
+.bn-digits {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffd700;
+  font-family: monospace;
+  text-shadow: 0 2px 8px rgba(243, 156, 18, 0.6);
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.btn-copy-bn {
+  background: #f39c12;
+  border: none;
+  color: #1e130c;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-copy-bn:hover {
+  background: #ffd700;
+  transform: scale(1.05);
+}
+
+.bn-subhint {
+  display: block;
+  font-size: 11px;
+  color: #c9b08f;
+}
+
+.mp-quick-actions-bar {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-whatsapp-share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 18px;
+  background: #25d366;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp-share:hover {
+  background: #20ba59;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.6);
+}
+
+.wa-icon {
+  font-size: 20px;
+}
+
+.slots-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.slots-mode-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: rgba(243, 156, 18, 0.2);
+  border: 1px solid #f39c12;
+  border-radius: 10px;
+  color: #ffd700;
+  font-weight: 700;
+}
+
+.mp-ai-pair-card {
+  margin-top: 10px;
+  background: rgba(30, 70, 32, 0.4);
+  border: 1px solid #2ecc71;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-pair-info strong {
+  display: block;
+  font-size: 12.5px;
+  color: #a8e6cf;
+}
+
+.ai-pair-info span {
+  font-size: 11px;
+  color: #dcedc1;
+}
+
+.btn-start-ai-pair {
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.btn-start-ai-pair:hover {
+  transform: scale(1.02);
+}
+
+
 

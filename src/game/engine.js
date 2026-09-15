@@ -33,15 +33,18 @@ export class BharakhattaEngine {
     this.initGame();
   }
 
-  initGame() {
+  initGame(customPlayers = null) {
     // 2p Mode: Player 1 (Team 1) vs Player 2 (Team 2)
     // 4p Mode: P1 & P3 (Team 1) vs P2 & P4 (Team 2)
-    if (this.gameMode === "4p") {
+    if (customPlayers && Array.isArray(customPlayers) && customPlayers.length > 0) {
+      this.players = customPlayers.map(p => ({ ...p }));
+      this.gameMode = this.players.length >= 4 ? "4p" : "2p";
+    } else if (this.gameMode === "4p") {
       this.players = [
         { id: 1, team: 1, name: "Player 1", avatar: "👑", color: "#e67e22", isAI: false },
-        { id: 2, team: 2, name: "Player 2", avatar: "🦚", color: "#27ae60", isAI: false },
+        { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
         { id: 3, team: 1, name: "Player 3", avatar: "🦁", color: "#d35400", isAI: false },
-        { id: 4, team: 2, name: "Player 4", avatar: "🦜", color: "#16a085", isAI: false }
+        { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
       ];
     } else {
       this.players = [

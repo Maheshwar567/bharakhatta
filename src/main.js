@@ -33,6 +33,7 @@ class BharakhattaApp {
     this.betModalOpen = false;
     this.loginModalOpen = !userManager.isLoggedIn();
     this.inLobby = userManager.isLoggedIn();
+    this.playerCount = 2; // 2 or 4 players
     this.lobbyMode = "solo";
     this.selectedBet = 250;
     this.profileModalOpen = false;
@@ -92,6 +93,7 @@ class BharakhattaApp {
       onChatReceived: (chatMsg) => this.handleChatReceived(chatMsg),
       onBetSynced: (bet) => this.handleBetSynced(bet),
       onSyncTimeoutPass: (msg) => this.handleRemoteTimeoutPass(msg),
+      onStart4pAIPair: (msg) => this.handleStart4pAIPair(msg),
       onError: (msg) => {
         this.mpState.errorMsg = msg;
         this.render();
@@ -134,22 +136,55 @@ class BharakhattaApp {
     this.matchPot = bet * 2;
     this.inLobby = false;
 
+    const user = userManager.getCurrentUser();
+    const myName = user ? (user.nickName || user.name) : "Player 1";
+
+    if (this.playerCount === 4) {
+      if (mode === "4p_solo") {
+        this.engine.gameMode = "4p";
+        this.engine.initGame([
+          { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
+          { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
+          { id: 3, team: 1, name: "Teammate AI", avatar: "🦁", color: "#d35400", isAI: true },
+          { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
+        ]);
+        this.winnerAwarded = false;
+        this.turnTimer.start();
+        this.engine.log(`🎲 4-Player Solo match started! You & Teammate AI (Team 1) vs System AI Pair (Team 2). Pot: 🪙${this.matchPot.toLocaleString()}`);
+        this.render();
+        return true;
+      }
+
+      // 4P Online (2 Friends + 2 AI Pair or 4 Friends)
+      this.mpModalOpen = true;
+      this.turnTimer.stop();
+      if (!this.mpState.roomCode) {
+        this.mpClient.createRoom("4p", myName);
+      }
+      this.render();
+      return true;
+    }
+
+    // 2-Player Modes:
     if (mode === "friend") {
       this.mpModalOpen = true;
       this.turnTimer.stop();
+      if (!this.mpState.roomCode) {
+        this.mpClient.createRoom("2p", myName);
+      }
       this.render();
       return true;
     }
 
     // Solo Mode vs System AI:
-    this.engine.initGame();
-    const user = userManager.getCurrentUser();
-    if (user && this.engine.players && this.engine.players[0]) {
-      this.engine.players[0].name = user.nickName || user.name;
-    }
+    this.engine.gameMode = "2p";
+    this.engine.initGame([
+      { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
+      { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
+    ]);
     this.winnerAwarded = false;
     this.turnTimer.start();
-    this.engine.log(`🎲 Game started vs System AI! Stake: 🪙${bet.toLocaleString()} | Winner Pot: 🪙${this.matchPot.toLocaleString()}`);
+    this.engine.log(`🎲 2-Player Game started vs System AI! Stake: 🪙${bet.toLocaleString()} | Winner Pot: 🪙${this.matchPot.toLocaleString()}`);
     this.render();
     return true;
   }
@@ -488,6 +523,30 @@ class BharakhattaApp {
     this.engine.advanceTurn();
   }
 
+  handleStart4pAIPair(msg) {
+    this.mpModalOpen = false;
+    if (msg && msg.bet) {
+      this.currentBet = msg.bet;
+      this.matchPot = msg.bet * 2;
+    }
+    const hostName = this.mpClient.hostName || "Host";
+    const guestName = this.mpClient.guestName || "Friend";
+
+    this.engine.gameMode = "4p";
+    this.engine.initGame([
+      { id: 1, team: 1, name: `${hostName} ${this.mpState.isHost ? '(You)' : ''}`, avatar: "👑", color: "#e67e22", isAI: false },
+      { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
+      { id: 3, team: 1, name: `${guestName} ${!this.mpState.isHost ? '(You)' : ''}`, avatar: "🦁", color: "#d35400", isAI: false },
+      { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
+    ]);
+
+    this.winnerAwarded = false;
+    this.turnTimer.start();
+    this.engine.log(`🤝 4-Player Match Active! Team 1 (${hostName} & ${guestName}) vs Team 2 (System AI Opposite Pair). Pot: 🪙${this.matchPot.toLocaleString()}`);
+    sounds.playBonusRoll();
+    this.render();
+  }
+
   render() {
     if (!this.engine) return;
     const state = this.engine.getStateSnapshot();
@@ -519,6 +578,7 @@ class BharakhattaApp {
         user: userManager.getCurrentUser(),
         walletCoins: wallet.getBalance(),
         selectedBet: this.selectedBet,
+        playerCount: this.playerCount,
         selectedMode: this.lobbyMode
       });
     }
@@ -585,10 +645,14 @@ class BharakhattaApp {
   }
 
   attachEventListeners(state) {
-    // Roll Button
+    // Roll Button & Cupped Palm Tap
     const btnRoll = document.getElementById("btn-roll-dice");
+    const palmBox = document.getElementById("palm-cupped-box");
     if (btnRoll) {
       btnRoll.onclick = () => this.attemptRoll();
+    }
+    if (palmBox) {
+      palmBox.onclick = () => this.attemptRoll();
     }
 
     // Release Jail Buttons
@@ -799,10 +863,32 @@ class BharakhattaApp {
         const code = codeInput ? codeInput.value.trim() : "";
         const name = nameInput ? nameInput.value.trim() : "Player 2";
         if (!code) {
-          alert("Please enter a 4-digit room code.");
+          alert("Please enter the Board Number (e.g. BK-260915-101-482).");
           return;
         }
         await this.mpClient.joinRoom(code, name);
+      };
+    }
+
+    // Copy Board Number
+    const btnCopyBoardNum = document.getElementById("btn-copy-board-number");
+    if (btnCopyBoardNum) {
+      btnCopyBoardNum.onclick = () => {
+        const digits = document.getElementById("text-board-number");
+        if (digits) {
+          navigator.clipboard.writeText(digits.textContent.trim());
+          btnCopyBoardNum.textContent = "✅ Copied!";
+          setTimeout(() => { if (btnCopyBoardNum) btnCopyBoardNum.textContent = "📋 Copy"; }, 1800);
+        }
+      };
+    }
+
+    // Start 4-Player Match with System AI Opposite Pair
+    const btnStart4pAi = document.getElementById("btn-start-4p-ai-pair");
+    if (btnStart4pAi) {
+      btnStart4pAi.onclick = () => {
+        this.mpClient.sendStart4pAIPair();
+        this.handleStart4pAIPair({ bet: this.currentBet });
       };
     }
 
@@ -989,9 +1075,31 @@ class BharakhattaApp {
       };
     }
 
-    // Lobby View Listeners
+    // Lobby View Listeners: Player Count Selection (2 or 4 Players)
+    const btnCount2p = document.getElementById("btn-count-2p");
+    const btnCount4p = document.getElementById("btn-count-4p");
+    if (btnCount2p) {
+      btnCount2p.onclick = () => {
+        this.playerCount = 2;
+        this.lobbyMode = "solo";
+        this.render();
+      };
+    }
+    if (btnCount4p) {
+      btnCount4p.onclick = () => {
+        this.playerCount = 4;
+        this.lobbyMode = "4p_ai_pair";
+        this.render();
+      };
+    }
+
+    // Lobby Match Mode Selection
     const btnModeSolo = document.getElementById("btn-select-mode-solo");
     const btnModeFriend = document.getElementById("btn-select-mode-friend");
+    const btnMode4pPair = document.getElementById("btn-select-mode-4p-pair");
+    const btnMode4pSolo = document.getElementById("btn-select-mode-4p-solo");
+    const btnMode4pFriends = document.getElementById("btn-select-mode-4p-friends");
+
     if (btnModeSolo) {
       btnModeSolo.onclick = () => {
         this.lobbyMode = "solo";
@@ -1001,6 +1109,39 @@ class BharakhattaApp {
     if (btnModeFriend) {
       btnModeFriend.onclick = () => {
         this.lobbyMode = "friend";
+        this.render();
+      };
+    }
+    if (btnMode4pPair) {
+      btnMode4pPair.onclick = () => {
+        this.lobbyMode = "4p_ai_pair";
+        this.render();
+      };
+    }
+    if (btnMode4pSolo) {
+      btnMode4pSolo.onclick = () => {
+        this.lobbyMode = "4p_solo";
+        this.render();
+      };
+    }
+    if (btnMode4pFriends) {
+      btnMode4pFriends.onclick = () => {
+        this.lobbyMode = "4p_friends";
+        this.render();
+      };
+    }
+
+    // Prominent Hero "Request Friend to Play on Same Board" Button
+    const btnLobbyReqFriend = document.getElementById("btn-lobby-request-friend");
+    if (btnLobbyReqFriend) {
+      btnLobbyReqFriend.onclick = () => {
+        const user = userManager.getCurrentUser();
+        const myName = user ? (user.nickName || user.name) : "Player 1";
+        const mode = this.playerCount === 4 ? "4p" : "2p";
+        this.mpModalOpen = true;
+        if (!this.mpState.roomCode) {
+          this.mpClient.createRoom(mode, myName);
+        }
         this.render();
       };
     }

@@ -1,5 +1,5 @@
 // Pre-Game Lobby & Pot Coins Setup View for Bharakhatta
-// Displays game mode selection, bet & pot selector, and prominent 'Start Game' button
+// Displays 2/4 player selection, mode selector, prominent 'Request Friend' action, and bet selector
 
 import { BET_TIERS } from "../game/wallet.js";
 
@@ -8,7 +8,8 @@ export function renderLobbyView(options = {}) {
     user,
     walletCoins = 1000,
     selectedBet = 250,
-    selectedMode = "solo" // "solo" or "friend"
+    playerCount = 2, // 2 or 4
+    selectedMode = "solo" // "solo", "friend", "4p_solo", "4p_ai_pair", "4p_friends"
   } = options;
 
   const nickName = user ? (user.nickName || user.name || "Player") : "Player";
@@ -23,7 +24,7 @@ export function renderLobbyView(options = {}) {
             <span class="lobby-shell-icon">🐚</span>
             <div>
               <h1 class="lobby-title">బాఱఖట్టా • BHARAKHATTA</h1>
-              <span class="lobby-subtitle">Traditional 7x7 Village Cowrie Game</span>
+              <span class="lobby-subtitle">Traditional 7x7 Village Cowrie Board Game</span>
             </div>
           </div>
           <div class="lobby-user-pill" id="btn-lobby-profile" title="View Profile & Match History">
@@ -34,37 +35,110 @@ export function renderLobbyView(options = {}) {
         </div>
 
         <div class="lobby-body">
-          <!-- Step 1: Mode Selection -->
+          <!-- Step 1: Player Count Selection (2 or 4 Players) -->
           <div class="lobby-section">
             <div class="section-title-bar">
               <span class="step-num">1</span>
-              <span class="section-heading">Select Match Mode</span>
+              <span class="section-heading">Choose Player Count (2 or 4)</span>
             </div>
-            <div class="mode-options-grid">
-              <button class="btn-mode-card ${selectedMode === 'solo' ? 'mode-active' : ''}" id="btn-select-mode-solo">
-                <span class="mode-icon">🤖</span>
-                <div class="mode-info">
-                  <strong>Play vs Computer</strong>
-                  <span>Fast offline match with System AI</span>
+            <div class="player-count-toggle-grid">
+              <button class="btn-player-count ${playerCount === 2 ? 'count-active' : ''}" id="btn-count-2p" data-count="2">
+                <span class="count-icon">👥</span>
+                <div class="count-text">
+                  <strong>2 Players</strong>
+                  <span>1 vs 1 Head to Head</span>
                 </div>
-                ${selectedMode === 'solo' ? '<span class="mode-check">✔</span>' : ''}
+                ${playerCount === 2 ? '<span class="count-check">✔</span>' : ''}
               </button>
 
-              <button class="btn-mode-card ${selectedMode === 'friend' ? 'mode-active' : ''}" id="btn-select-mode-friend">
-                <span class="mode-icon">👥</span>
-                <div class="mode-info">
-                  <strong>Play with Friend</strong>
-                  <span>2-Player room on other mobile phone</span>
+              <button class="btn-player-count ${playerCount === 4 ? 'count-active' : ''}" id="btn-count-4p" data-count="4">
+                <span class="count-icon">👥👥</span>
+                <div class="count-text">
+                  <strong>4 Players</strong>
+                  <span>2 vs 2 Team Match</span>
                 </div>
-                ${selectedMode === 'friend' ? '<span class="mode-check">✔</span>' : ''}
+                ${playerCount === 4 ? '<span class="count-check">✔</span>' : ''}
               </button>
             </div>
           </div>
 
-          <!-- Step 2: Bet Stakes & Pot Selection -->
+          <!-- Step 2: Match Setup / Mode Selection -->
           <div class="lobby-section">
             <div class="section-title-bar">
               <span class="step-num">2</span>
+              <span class="section-heading">${playerCount === 2 ? 'Select 2-Player Mode' : 'Select 4-Player Mode'}</span>
+            </div>
+
+            ${playerCount === 2 ? `
+              <!-- 2-Player Options -->
+              <div class="mode-options-grid">
+                <button class="btn-mode-card ${selectedMode === 'solo' ? 'mode-active' : ''}" id="btn-select-mode-solo">
+                  <span class="mode-icon">🤖</span>
+                  <div class="mode-info">
+                    <strong>Play vs Computer (1v1)</strong>
+                    <span>Solo match with System AI</span>
+                  </div>
+                  ${selectedMode === 'solo' ? '<span class="mode-check">✔</span>' : ''}
+                </button>
+
+                <button class="btn-mode-card ${selectedMode === 'friend' ? 'mode-active' : ''}" id="btn-select-mode-friend">
+                  <span class="mode-icon">👥</span>
+                  <div class="mode-info">
+                    <strong>Play with Friend (1v1)</strong>
+                    <span>Invite friend on other mobile with Board #</span>
+                  </div>
+                  ${selectedMode === 'friend' ? '<span class="mode-check">✔</span>' : ''}
+                </button>
+              </div>
+            ` : `
+              <!-- 4-Player Options -->
+              <div class="mode-options-grid mode-grid-3">
+                <button class="btn-mode-card ${selectedMode === '4p_ai_pair' ? 'mode-active' : ''}" id="btn-select-mode-4p-pair">
+                  <span class="mode-icon">🤝</span>
+                  <div class="mode-info">
+                    <strong>2 Friends + 2 AI Pair</strong>
+                    <span>You & Friend (Team 1) vs System AI Pair (Team 2)</span>
+                  </div>
+                  ${selectedMode === '4p_ai_pair' ? '<span class="mode-check">✔</span>' : ''}
+                </button>
+
+                <button class="btn-mode-card ${selectedMode === '4p_solo' ? 'mode-active' : ''}" id="btn-select-mode-4p-solo">
+                  <span class="mode-icon">🤖</span>
+                  <div class="mode-info">
+                    <strong>Solo (1 Human + 3 AI)</strong>
+                    <span>You & AI Partner vs 2 AI Opponents</span>
+                  </div>
+                  ${selectedMode === '4p_solo' ? '<span class="mode-check">✔</span>' : ''}
+                </button>
+
+                <button class="btn-mode-card ${selectedMode === '4p_friends' ? 'mode-active' : ''}" id="btn-select-mode-4p-friends">
+                  <span class="mode-icon">👥👥</span>
+                  <div class="mode-info">
+                    <strong>4 Friends Online</strong>
+                    <span>Send Board # to request friends</span>
+                  </div>
+                  ${selectedMode === '4p_friends' ? '<span class="mode-check">✔</span>' : ''}
+                </button>
+              </div>
+            `}
+
+            <!-- Prominent Request Friend to Play on Same Board Button -->
+            <div class="request-friend-banner">
+              <button class="btn-request-friend-hero" id="btn-lobby-request-friend">
+                <span class="rf-icon">📲</span>
+                <div class="rf-content">
+                  <strong>Request Friend to Play on Same Board</strong>
+                  <span>Share Board Number, WhatsApp Invite & QR Code</span>
+                </div>
+                <span class="rf-arrow">➔</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 3: Bet Stakes & Pot Selection -->
+          <div class="lobby-section">
+            <div class="section-title-bar">
+              <span class="step-num">3</span>
               <span class="section-heading">Choose Pot Coins / Bet Stakes</span>
             </div>
             
@@ -102,7 +176,7 @@ export function renderLobbyView(options = {}) {
           </div>
         </div>
 
-        <!-- Step 3: Start Game (Centered Down Middle) -->
+        <!-- Step 4: Start Game (Centered Down Middle) -->
         <div class="lobby-footer-center">
           <button class="btn-primary btn-start-game-lobby" id="btn-lobby-start-game">
             🎲 Start Game (Pot: 🪙${potAmount.toLocaleString()})

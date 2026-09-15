@@ -15,11 +15,21 @@ export function setupMultiplayerServer(httpServer) {
     }
   });
 
+  let serverCounter = 100;
+  const issuedCodes = new Set();
+
   function generateRoomCode() {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
     let code;
     do {
-      code = Math.floor(1000 + Math.random() * 9000).toString();
-    } while (rooms.has(code));
+      serverCounter++;
+      const rand = Math.floor(100 + Math.random() * 900);
+      code = `BK-${yy}${mm}${dd}-${serverCounter}-${rand}`;
+    } while (rooms.has(code) || issuedCodes.has(code));
+    issuedCodes.add(code);
     return code;
   }
 
@@ -77,22 +87,36 @@ export function setupMultiplayerServer(httpServer) {
         }
 
         if (type === "JOIN_ROOM") {
-          const roomCode = (msg.roomCode || "").trim();
-          const room = rooms.get(roomCode);
+          const rawCode = (msg.roomCode || "").trim().toUpperCase();
+          let room = rooms.get(rawCode);
+          let matchedKey = rawCode;
 
           if (!room) {
-            ws.send(JSON.stringify({ type: "ERROR", message: `Room "${roomCode}" not found.` }));
+            for (const [key, val] of rooms.entries()) {
+              const kClean = key.toUpperCase();
+              if (kClean === rawCode || kClean.replace(/^BK-/, "") === rawCode.replace(/^BK-/, "")) {
+                room = val;
+                matchedKey = key;
+                break;
+              }
+            }
+          }
+
+          if (!room) {
+            ws.send(JSON.stringify({ type: "ERROR", message: `Board "${rawCode}" not found.` }));
             return;
           }
 
+          const roomCode = matchedKey;
           const maxPlayers = room.mode === "4p" ? 4 : 2;
           if (room.players.length >= maxPlayers) {
-            ws.send(JSON.stringify({ type: "ERROR", message: `Room "${roomCode}" is already full.` }));
+            ws.send(JSON.stringify({ type: "ERROR", message: `Board "${roomCode}" is already full.` }));
             return;
           }
 
-          // Assign slot: Player 2 (Team 2), Player 3 (Team 1), Player 4 (Team 2)
-          const newId = room.players.length + 1;
+          // In 4P mode with 2 friends, 2nd player joins as Player 3 (Team 1 partner)
+          const is4p = room.mode === "4p";
+          const newId = is4p && room.players.length === 1 ? 3 : room.players.length + 1;
           const team = (newId === 1 || newId === 3) ? 1 : 2;
           const playerName = msg.playerName || `Player ${newId}`;
 
@@ -131,7 +155,7 @@ export function setupMultiplayerServer(httpServer) {
         }
 
         // Forward gameplay actions to room peers
-        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS") {
+        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR") {
           if (!currentRoomCode) return;
           const room = rooms.get(currentRoomCode);
           if (!room) return;
