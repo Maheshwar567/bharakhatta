@@ -57,7 +57,7 @@ export function renderCowrieShell(shell, isRolling) {
   `;
 }
 
-export function renderCowrieArea(gameState, mpState = null) {
+export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
   const { status, currentRoll, diceMode, currentPlayer } = gameState;
   const isRolling = status === "ROLLING";
 
@@ -120,8 +120,9 @@ export function renderCowrieArea(gameState, mpState = null) {
     `;
   } else {
     scoreBadgeHtml = `
-      <div class="compact-score-badge idle-badge">
-        <span class="turn-prompt">${isMyTurn ? "Your Turn!" : `${currentPlayer.name}'s Turn`}</span>
+      <div class="compact-score-badge idle-badge ${isMyTurn ? "badge-my-turn" : ""}">
+        <span class="turn-prompt">${isMyTurn ? "👉 Your Turn!" : `⏳ ${currentPlayer.name}'s Turn`}</span>
+        <span class="turn-timer-sub">⏳ ${timeLeft}s</span>
       </div>
     `;
   }
@@ -134,7 +135,7 @@ export function renderCowrieArea(gameState, mpState = null) {
   }
 
   return `
-    <div class="mobile-cowrie-console">
+    <div class="mobile-cowrie-console ${isMyTurn && canRoll ? "console-my-turn" : ""}">
       <div class="cowrie-left-zone">
         ${shellsHtml}
         ${scoreBadgeHtml}

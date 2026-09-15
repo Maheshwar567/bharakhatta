@@ -28,6 +28,7 @@ export class BharakhattaEngine {
 
     this.onStateChange = options.onStateChange || (() => {});
     this.onLog = options.onLog || (() => {});
+    this.onTurnChange = options.onTurnChange || (() => {});
 
     this.initGame();
   }
@@ -288,8 +289,8 @@ export class BharakhattaEngine {
   }
 
   // Execute a selected move
-  executeMove(move) {
-    if (this.status !== GAME_STATUS.WAITING_FOR_MOVE) return;
+  executeMove(move, force = false) {
+    if (!force && this.status !== GAME_STATUS.WAITING_FOR_MOVE) return;
 
     this.status = GAME_STATUS.ANIMATING_MOVE;
     this.validMoves = [];
@@ -316,9 +317,13 @@ export class BharakhattaEngine {
 
       this.log(`🚪 ${player.name} released ${countToRelease} coin(s) from Jail onto Home Base!`);
 
-      this.finishMove(this.currentRoll.isBonus);
+      const isBonus = this.currentRoll ? this.currentRoll.isBonus : false;
+      this.finishMove(isBonus);
     } else if (move.type === "MOVE_COIN" || move.type === "FINISH_COIN") {
-      const coin = move.coin;
+      // Find actual internal coin instance
+      const coin = (move.coin && move.coin.id)
+        ? (this.coins.find(c => c.id === move.coin.id) || move.coin)
+        : move.coin;
       const startStep = coin.stepIndex;
       const endStep = move.toStep;
       const isLooped = move.looped;
@@ -375,7 +380,8 @@ export class BharakhattaEngine {
 
         // Determine if player gets another turn:
         // Bonus roll (1, 5, 6, 12) OR capture ("Kill") grants bonus turn!
-        const getsBonusTurn = this.currentRoll.isBonus || captured;
+        const isBonus = this.currentRoll ? this.currentRoll.isBonus : false;
+        const getsBonusTurn = isBonus || captured;
         this.finishMove(getsBonusTurn);
       });
     }
@@ -444,7 +450,46 @@ export class BharakhattaEngine {
     this.log(`👉 Turn: ${nextPlayer.name} (Team ${nextPlayer.team})`);
     this.emitChange();
 
+    if (this.onTurnChange) {
+      this.onTurnChange(nextPlayer);
+    }
+
     this.checkAITurn();
+  }
+
+  getBestLegalMove() {
+    if (this.validMoves.length === 0) return null;
+
+    let bestMove = this.validMoves[0];
+    let bestScore = -999;
+
+    for (const move of this.validMoves) {
+      let score = 0;
+      if (move.type === "FINISH_COIN") score += 500;
+      if (move.isCapture) score += 400;
+      if (move.type === "RELEASE_JAIL") score += 250 + (move.count || 1) * 20;
+      if (move.isSafe) score += 150;
+      if (move.type === "MOVE_COIN") score += move.toStep;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+    return bestMove;
+  }
+
+  autoPlayTurn() {
+    if (this.status === GAME_STATUS.WAITING_FOR_ROLL) {
+      return this.roll();
+    } else if (this.status === GAME_STATUS.WAITING_FOR_MOVE) {
+      const best = this.getBestLegalMove();
+      if (best) {
+        this.executeMove(best);
+        return best;
+      }
+    }
+    return null;
   }
 
   checkWinCondition(teamId) {
@@ -468,42 +513,10 @@ export class BharakhattaEngine {
   }
 
   executeAIMove() {
-    if (this.validMoves.length === 0) return;
-
-    // AI Heuristics:
-    // 1. Capture opponent pawn (huge priority)
-    // 2. Reach center sanctum (finish coin)
-    // 3. Release coins from jail (bring pawns into play)
-    // 4. Move to a safe 'X' square
-    // 5. Advance furthest forward coin
-    let bestMove = this.validMoves[0];
-    let bestScore = -999;
-
-    for (const move of this.validMoves) {
-      let score = 0;
-      if (move.type === "FINISH_COIN") {
-        score += 500;
-      }
-      if (move.isCapture) {
-        score += 400;
-      }
-      if (move.type === "RELEASE_JAIL") {
-        score += 250 + (move.count || 1) * 20;
-      }
-      if (move.isSafe) {
-        score += 150;
-      }
-      if (move.type === "MOVE_COIN") {
-        score += move.toStep; // prefer advancing forward
-      }
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
-      }
+    const bestMove = this.getBestLegalMove();
+    if (bestMove) {
+      this.executeMove(bestMove);
     }
-
-    this.executeMove(bestMove);
   }
 
   log(msg) {

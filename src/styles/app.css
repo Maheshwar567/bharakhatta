@@ -1139,3 +1139,469 @@ body {
   background: rgba(230, 126, 34, 0.25);
   font-weight: bold;
 }
+
+/* ====================================================== */
+/* Wallet & Match Pot Badges                              */
+/* ====================================================== */
+.wallet-header-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #170b05;
+  border: 1px solid #f39c12;
+  color: #ffdf9e;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.wallet-header-pill:active {
+  transform: scale(0.96);
+}
+
+.pot-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #4a2711, #251208);
+  border: 1px solid #f1c40f;
+  color: #f1c40f;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 7px;
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.3);
+  animation: pulse-turn 1.5s infinite alternate;
+}
+
+/* ====================================================== */
+/* 30-Second Turn Countdown Timer                         */
+/* ====================================================== */
+.turn-timer-pill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: #191009;
+  border: 1px solid #5a351e;
+  color: #ffdf9e;
+  transition: all 0.2s ease;
+}
+
+.timer-normal {
+  border-color: #27ae60;
+  color: #2ecc71;
+}
+
+.timer-warning {
+  border-color: #f39c12;
+  color: #f39c12;
+  box-shadow: 0 0 8px rgba(243, 156, 18, 0.5);
+  animation: pulse-turn 0.8s infinite alternate;
+}
+
+.timer-urgent {
+  border-color: #e74c3c;
+  color: #ff7675;
+  background: #3c140e;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.8);
+  animation: pulse-turn 0.4s infinite alternate;
+}
+
+.turn-timer-sub {
+  font-size: 9px;
+  font-weight: 800;
+  color: #ffdf9e;
+  margin-top: 1px;
+}
+
+/* ====================================================== */
+/* Chat Button & In-Game Chat Drawer                      */
+/* ====================================================== */
+.btn-chat-glow {
+  background: #1d3827 !important;
+  border-color: #2ecc71 !important;
+  color: #2ecc71 !important;
+  position: relative;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #fff;
+}
+
+.btn-bet-chip {
+  background: #3d2311 !important;
+  border-color: #f39c12 !important;
+  color: #ffdf9e !important;
+}
+
+.chat-dialog {
+  max-width: 480px;
+  background: #231208;
+}
+
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.quick-taunts-section {
+  background: #170b05;
+  border: 1px solid #482713;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.quick-taunts-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffdf9e;
+  margin-bottom: 6px;
+}
+
+.quick-taunts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+.btn-quick-taunt {
+  background: #2d170c;
+  border: 1px solid #5a351e;
+  color: #f5eedc;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-quick-taunt:active {
+  background: #4a2713;
+  transform: scale(0.97);
+}
+
+.chat-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px;
+  background: #170b05;
+  border-radius: 8px;
+  border: 1px solid #482713;
+}
+
+.chat-empty-state {
+  color: #a38262;
+  font-size: 11px;
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.chat-msg-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.msg-me {
+  justify-content: flex-end;
+}
+
+.msg-me .msg-sender {
+  color: #f39c12;
+  font-weight: 800;
+}
+
+.msg-me .msg-bubble {
+  background: #3e2213;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 8px 8px 0 8px;
+  border: 1px solid #6b3d1f;
+}
+
+.msg-friend {
+  justify-content: flex-start;
+}
+
+.msg-friend .msg-sender {
+  color: #2ecc71;
+  font-weight: 800;
+}
+
+.msg-friend .msg-bubble {
+  background: #163020;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 8px 8px 8px 0;
+  border: 1px solid #27ae60;
+}
+
+.msg-time {
+  font-size: 8px;
+  color: #8c6f56;
+}
+
+.chat-input-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid #482713;
+  background: #1b0d06;
+}
+
+.chat-input {
+  flex: 1;
+  background: #140904;
+  border: 1px solid #5a351e;
+  color: #ffdf9e;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+}
+
+.btn-send-chat {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* ====================================================== */
+/* Floating Chat Bubble Over Board                        */
+/* ====================================================== */
+.floating-chat-bubble {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #170b05ee;
+  border: 1.5px solid #f39c12;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  padding: 6px 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.animated-bubble {
+  animation: bubble-slide 0.3s ease-out;
+}
+
+@keyframes bubble-slide {
+  0% { opacity: 0; transform: translate(-50%, -15px) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.bubble-avatar {
+  font-size: 14px;
+}
+
+.bubble-content {
+  display: flex;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.bubble-sender {
+  font-weight: 900;
+  color: #f1c40f;
+}
+
+.bubble-text {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ====================================================== */
+/* Betting Modal Styles                                   */
+/* ====================================================== */
+.bet-dialog {
+  max-width: 440px;
+  background: #231208;
+}
+
+.bet-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.wallet-balance-card {
+  background: #170b05;
+  border: 1.5px solid #5a351e;
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-lbl {
+  font-size: 11px;
+  color: #c9a77c;
+  font-weight: 700;
+}
+
+.wallet-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: #f1c40f;
+}
+
+.btn-refill-coins {
+  background: linear-gradient(135deg, #e67e22, #c0392b);
+  border: 1px solid #ffde94;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  animation: pulse-turn 1s infinite alternate;
+}
+
+.pot-preview-box {
+  background: linear-gradient(135deg, #3d2110, #1f0f07);
+  border: 2px solid #f1c40f;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
+.pot-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #e5b985;
+  letter-spacing: 1px;
+}
+
+.pot-amount {
+  font-size: 28px;
+  font-weight: 900;
+  color: #f1c40f;
+  margin: 2px 0;
+}
+
+.pot-sub {
+  font-size: 10px;
+  color: #a88b6f;
+}
+
+.bet-selection-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bet-section-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffdf9e;
+}
+
+.bet-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.bet-chip {
+  background: #170b05;
+  border: 1.5px solid #5a351e;
+  border-radius: 8px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bet-chip:active {
+  transform: scale(0.96);
+}
+
+.chip-coin-icon {
+  font-size: 16px;
+}
+
+.chip-amount {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffdf9e;
+}
+
+.bet-chip-selected {
+  border-color: #f1c40f;
+  background: #3e2213;
+  box-shadow: 0 0 12px rgba(241, 196, 15, 0.4);
+}
+
+.bet-chip-selected .chip-amount {
+  color: #f1c40f;
+}
+
+.bet-chip-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bet-error-msg {
+  color: #ff7675;
+  font-size: 10px;
+  background: rgba(192, 57, 43, 0.25);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #c0392b;
+}
+
+.btn-confirm-bet {
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.console-my-turn {
+  border-color: #f39c12 !important;
+  box-shadow: 0 0 14px rgba(243, 156, 18, 0.45) !important;
+}
+
+.badge-my-turn {
+  border-color: #f39c12 !important;
+  animation: pulse-turn 1s infinite alternate;
+}

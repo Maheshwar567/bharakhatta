@@ -1,8 +1,17 @@
 // Compact Header & Player status for Bharakhatta
 
-export function renderHeader(gameState, soundMuted, mpState = null) {
+export function renderHeader(gameState, soundMuted, mpState = null, options = {}) {
   const { gameMode, diceMode, status, currentPlayer, winner } = gameState;
   const inOnlineRoom = mpState && mpState.roomCode;
+  const isPaired = inOnlineRoom && mpState.players && mpState.players.length >= 2;
+  const walletCoins = options.walletCoins !== undefined ? options.walletCoins : 1000;
+  const matchPot = options.matchPot || 0;
+  const timeLeft = options.timeLeft !== undefined ? options.timeLeft : 30;
+  const unreadChatCount = options.unreadChatCount || 0;
+
+  let timerColorClass = "timer-normal";
+  if (timeLeft <= 5) timerColorClass = "timer-urgent";
+  else if (timeLeft <= 10) timerColorClass = "timer-warning";
 
   return `
     <header class="app-header">
@@ -11,25 +20,56 @@ export function renderHeader(gameState, soundMuted, mpState = null) {
           <span class="logo-icon">🐚</span>
           <div>
             <h1 class="brand-title">BHARAKHATTA</h1>
-            <span class="brand-subtitle">బాఱఖట్టా • Village Cowrie Board Game</span>
+            <span class="brand-subtitle">బాఱఖట్టా • Village Cowrie Board</span>
           </div>
         </div>
 
+        <!-- Wallet Coins Chip -->
+        <div class="wallet-header-pill" id="btn-open-wallet" title="Your Coin Wallet (Click to change bet)">
+          <span class="coin-icon">🪙</span>
+          <span class="coin-bal">${walletCoins.toLocaleString()}</span>
+        </div>
+
+        <!-- Match Pot Badge (if bet is active) -->
+        ${matchPot > 0 ? `
+          <div class="pot-header-badge" title="Total Match Pot">
+            <span class="pot-icon">🏆</span>
+            <span class="pot-val">Pot: 🪙${matchPot.toLocaleString()}</span>
+          </div>
+        ` : ""}
+
+        <!-- Room Indicator -->
         ${inOnlineRoom ? `
-          <div class="room-indicator-pill" id="btn-open-mp-badge" title="Click to view room details">
-            <span class="live-dot">🟢</span>
+          <div class="room-indicator-pill" id="btn-open-mp-badge" title="Room #${mpState.roomCode}">
+            <span class="live-dot">${isPaired ? "🟢" : "⏳"}</span>
             <span>Room: <strong>#${mpState.roomCode}</strong></span>
           </div>
         ` : ""}
       </div>
 
       <div class="header-controls">
-        <button id="btn-open-multiplayer" class="btn-icon btn-mp-glow" title="Play with a friend on another mobile phone">
-          👥 Play with Friend
-        </button>
+        <!-- 30s Turn Timer Pill -->
+        <div class="turn-timer-pill ${timerColorClass}" title="30-Second Turn Timer">
+          <span class="timer-icon">⏳</span>
+          <span class="timer-seconds">${timeLeft}s</span>
+        </div>
 
-        <button id="btn-open-mobile" class="btn-icon" title="Scan QR Code to open on phone">
-          📱 QR
+        <!-- Show Chat button when paired in multiplayer -->
+        ${isPaired ? `
+          <button id="btn-open-chat" class="btn-icon btn-chat-glow" title="In-Game Live Chat">
+            💬 Chat ${unreadChatCount > 0 ? `<span class="chat-badge">${unreadChatCount}</span>` : ""}
+          </button>
+        ` : ""}
+
+        <!-- Only show 'Play with Friend' when NOT yet paired -->
+        ${!isPaired ? `
+          <button id="btn-open-multiplayer" class="btn-icon btn-mp-glow" title="Play with a friend on another mobile phone">
+            👥 Play with Friend
+          </button>
+        ` : ""}
+
+        <button id="btn-open-bet" class="btn-icon btn-bet-chip" title="Match Coin Stake / Bet">
+          🪙 Bet
         </button>
 
         <button id="btn-toggle-dice" class="btn-toggle-mode" title="Switch between 6 Guvvalu and Standard Die">
@@ -41,7 +81,7 @@ export function renderHeader(gameState, soundMuted, mpState = null) {
         </button>
 
         <button id="btn-open-rules" class="btn-icon" title="Game Rules & Guide">
-          📜 Rules
+          📜
         </button>
 
         <button id="btn-restart-game" class="btn-primary-sm" title="New Match">

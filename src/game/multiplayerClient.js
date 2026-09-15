@@ -1,7 +1,8 @@
 // Client-side Hybrid WebSocket & WebRTC (PeerJS) Manager for Bharakhatta Multiplayer
 // Works locally via WebSocket and globally on GitHub Pages / Mobile via WebRTC P2P
 
-import { Peer } from "peerjs";
+import PeerModule from "peerjs";
+const Peer = PeerModule.Peer || PeerModule.default || PeerModule;
 
 export class MultiplayerClient {
   constructor(options = {}) {
@@ -24,8 +25,11 @@ export class MultiplayerClient {
     this.onSyncRoll = options.onSyncRoll || (() => {});
     this.onSyncMove = options.onSyncMove || (() => {});
     this.onSyncRestart = options.onSyncRestart || (() => {});
+    this.onChatReceived = options.onChatReceived || (() => {});
+    this.onBetSynced = options.onBetSynced || (() => {});
     this.onError = options.onError || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
+    this.currentBet = 250;
   }
 
   isP2PPreferred() {
@@ -117,6 +121,15 @@ export class MultiplayerClient {
         this.onSyncRestart();
         break;
 
+      case "ACTION_CHAT":
+        this.onChatReceived(msg);
+        break;
+
+      case "ROOM_BET":
+        this.currentBet = msg.bet;
+        this.onBetSynced(msg.bet);
+        break;
+
       case "ERROR":
         this.onError(msg.message);
         break;
@@ -182,7 +195,8 @@ export class MultiplayerClient {
             roomCode,
             playerId: 2,
             team: 2,
-            players
+            players,
+            bet: this.currentBet
           });
           this.onPlayerJoined({ id: 2, team: 2, name: this.guestName }, players);
         } else {
@@ -282,6 +296,31 @@ export class MultiplayerClient {
     this.send({
       type: "ACTION_RESTART",
       roomCode: this.roomCode
+    });
+  }
+
+  sendChat(text, senderName = "Player") {
+    if (!this.roomCode) return;
+    const msg = {
+      type: "ACTION_CHAT",
+      roomCode: this.roomCode,
+      senderId: this.myPlayerId,
+      senderName,
+      text,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    };
+    this.send(msg);
+    // Also dispatch to local handler so sender sees their own message
+    this.onChatReceived(msg);
+  }
+
+  sendBet(bet) {
+    this.currentBet = bet;
+    if (!this.roomCode) return;
+    this.send({
+      type: "ROOM_BET",
+      roomCode: this.roomCode,
+      bet
     });
   }
 
