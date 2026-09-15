@@ -2085,3 +2085,548 @@ body {
   line-height: 1.4;
 }
 
+/* =================================================================
+   FORMATTED TOP HEADER ECONOMY LINE
+   (Game Coins - Login Nick Name - Pot Coins)
+   ================================================================= */
+.header-economy-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 15, 10, 0.75);
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(243, 156, 18, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.econ-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #f5eedc;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.econ-pill:hover {
+  transform: scale(1.03);
+}
+
+.econ-label {
+  color: #c0a875;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.econ-val {
+  color: #ffd700;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.econ-nick {
+  color: #2ecc71 !important;
+  background: rgba(46, 204, 113, 0.18);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.econ-sep {
+  color: rgba(243, 156, 18, 0.4);
+  font-size: 11px;
+  user-select: none;
+}
+
+/* =================================================================
+   LOGIN REDESIGN (Centered Enter Button & Clean Inputs)
+   ================================================================= */
+.modal-login-redesign {
+  max-width: 420px;
+  border: 2px solid #f39c12;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(243, 156, 18, 0.3);
+}
+
+.login-header-styled {
+  background: linear-gradient(135deg, #2c1810, #3e2723);
+  padding: 16px;
+  border-bottom: 1px solid rgba(243, 156, 18, 0.3);
+  border-radius: 12px 12px 0 0;
+}
+
+.login-brand-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-brand-icon {
+  font-size: 32px;
+  animation: float 2.5s infinite ease-in-out;
+}
+
+.login-main-title {
+  margin: 0;
+  font-size: 17px;
+  color: #ffd700;
+  font-family: inherit;
+  font-weight: 900;
+}
+
+.login-sub-title {
+  font-size: 10px;
+  color: #d7ccc8;
+}
+
+.login-body-styled {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-perks-row {
+  display: flex;
+  gap: 8px;
+}
+
+.perk-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(243, 156, 18, 0.1);
+  border: 1px solid rgba(243, 156, 18, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: #f5eedc;
+}
+
+.perk-ico {
+  font-size: 16px;
+}
+
+.nickname-preview-box {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #c0a875;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-badge {
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #2ecc71;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.login-footer-centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 20px 20px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-enter-bharakhatta {
+  width: 85%;
+  max-width: 320px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #e67e22, #d35400, #b94200);
+  border: 2px solid #ffd700;
+  border-radius: 28px;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(230, 126, 34, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.btn-enter-bharakhatta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(243, 156, 18, 0.8);
+}
+
+/* =================================================================
+   PRE-GAME LOBBY VIEW (POT & MODE SELECTOR)
+   ================================================================= */
+.lobby-overlay-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(10, 6, 4, 0.88);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.lobby-card {
+  background: #1e130c;
+  border: 2px solid #f39c12;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), 0 0 25px rgba(243, 156, 18, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lobby-header {
+  background: linear-gradient(135deg, #2c1810, #3e2723);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.lobby-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lobby-shell-icon {
+  font-size: 28px;
+}
+
+.lobby-title {
+  margin: 0;
+  font-size: 16px;
+  color: #ffd700;
+  font-weight: 900;
+}
+
+.lobby-subtitle {
+  font-size: 10px;
+  color: #d7ccc8;
+}
+
+.lobby-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(243, 156, 18, 0.15);
+  border: 1px solid rgba(243, 156, 18, 0.35);
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.user-nick {
+  color: #2ecc71;
+  font-weight: 800;
+}
+
+.user-balance {
+  color: #ffd700;
+  font-weight: 700;
+}
+
+.lobby-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lobby-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f39c12;
+  color: #1a0f0a;
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-heading {
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffd700;
+}
+
+.mode-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-mode-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(243, 156, 18, 0.25);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f5eedc;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.btn-mode-card:hover {
+  background: rgba(243, 156, 18, 0.1);
+  border-color: #f39c12;
+}
+
+.mode-active {
+  background: rgba(243, 156, 18, 0.18) !important;
+  border: 2px solid #ffd700 !important;
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.3);
+}
+
+.mode-icon {
+  font-size: 22px;
+}
+
+.mode-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode-info strong {
+  font-size: 11px;
+  color: #fff;
+}
+
+.mode-info span {
+  font-size: 9px;
+  color: #b0bec5;
+}
+
+.mode-check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 11px;
+  color: #2ecc71;
+}
+
+.bet-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.btn-lobby-tier {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(243, 156, 18, 0.3);
+  border-radius: 10px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  color: #fff;
+  transition: all 0.15s ease;
+}
+
+.btn-lobby-tier:hover:not(:disabled) {
+  background: rgba(243, 156, 18, 0.15);
+  border-color: #f39c12;
+  transform: translateY(-1px);
+}
+
+.tier-selected {
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.35), rgba(211, 84, 0, 0.35)) !important;
+  border: 2px solid #ffd700 !important;
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.4);
+}
+
+.tier-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tier-chip-icon {
+  font-size: 16px;
+}
+
+.tier-stake {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd700;
+}
+
+.tier-pot-label {
+  font-size: 9px;
+  color: #a0aec0;
+}
+
+.pot-preview-banner {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(243, 156, 18, 0.4);
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.preview-label {
+  font-size: 9px;
+  color: #c0a875;
+  text-transform: uppercase;
+}
+
+.preview-val {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.stake-val {
+  color: #f39c12;
+}
+
+.pot-val {
+  color: #ffd700;
+}
+
+.preview-arrow {
+  font-size: 16px;
+  color: #f39c12;
+}
+
+.lobby-footer-center {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 16px 20px 18px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-start-game-lobby {
+  width: 90%;
+  max-width: 340px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #e67e22, #d35400, #b94200);
+  border: 2px solid #ffd700;
+  border-radius: 28px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(230, 126, 34, 0.7);
+  transition: all 0.2s ease;
+}
+
+.btn-start-game-lobby:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(243, 156, 18, 0.9);
+}
+
+.lobby-sub-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.btn-sub-link {
+  background: none;
+  border: none;
+  color: #c0a875;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 11px;
+  transition: color 0.15s;
+}
+
+.btn-sub-link:hover {
+  color: #ffd700;
+  text-decoration: underline;
+}
+
+.dot-sep {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* =================================================================
+   SMILIES BAR SECTION IN CHAT
+   ================================================================= */
+.smilies-bar-section {
+  padding: 8px 12px 6px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.smilies-bar-title {
+  font-size: 10px;
+  color: #c0a875;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.smilies-bar-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.btn-smiley-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 18px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.btn-smiley-chip:hover {
+  transform: scale(1.25);
+  background: rgba(243, 156, 18, 0.25);
+  border-color: #ffd700;
+}
+
+

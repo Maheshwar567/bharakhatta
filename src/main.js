@@ -14,10 +14,11 @@ import { renderChatDrawer, renderFloatingChatToast, QUICK_TAUNTS } from "./compo
 import { renderBetModal } from "./components/BetModal.js";
 import { MultiplayerClient } from "./game/multiplayerClient.js";
 import { wallet } from "./game/wallet.js";
-import { userManager } from "./game/userManager.js";
+import { userManager, computeNickName } from "./game/userManager.js";
 import { renderLoginModal } from "./components/LoginModal.js";
 import { renderProfileHistoryModal } from "./components/ProfileHistoryModal.js";
 import { renderExitConfirmModal, renderInactivityModal } from "./components/ExitModal.js";
+import { renderLobbyView } from "./components/LobbyView.js";
 import { TurnTimer } from "./game/turnTimer.js";
 import { sounds } from "./audio/soundManager.js";
 import { haptics } from "./utils/haptics.js";
@@ -31,6 +32,9 @@ class BharakhattaApp {
     this.chatOpen = false;
     this.betModalOpen = false;
     this.loginModalOpen = !userManager.isLoggedIn();
+    this.inLobby = userManager.isLoggedIn();
+    this.lobbyMode = "solo";
+    this.selectedBet = 250;
     this.profileModalOpen = false;
     this.exitModalOpen = false;
     this.inactivityModalOpen = false;
@@ -114,8 +118,40 @@ class BharakhattaApp {
     this.initMobileAudioUnlock();
     this.initBackgroundDetection();
     this.checkUrlRoomParam();
-    this.turnTimer.start();
+    if (!this.loginModalOpen && !this.inLobby) {
+      this.turnTimer.start();
+    }
     this.render();
+  }
+
+  startGame(mode = "solo", bet = 250) {
+    if (!wallet.canAfford(bet)) {
+      alert(`You don't have enough coins (Need 🪙${bet.toLocaleString()}! Current: 🪙${wallet.getBalance().toLocaleString()})`);
+      return false;
+    }
+    wallet.placeBet(bet);
+    this.currentBet = bet;
+    this.matchPot = bet * 2;
+    this.inLobby = false;
+
+    if (mode === "friend") {
+      this.mpModalOpen = true;
+      this.turnTimer.stop();
+      this.render();
+      return true;
+    }
+
+    // Solo Mode vs System AI:
+    this.engine.initGame();
+    const user = userManager.getCurrentUser();
+    if (user && this.engine.players && this.engine.players[0]) {
+      this.engine.players[0].name = user.nickName || user.name;
+    }
+    this.winnerAwarded = false;
+    this.turnTimer.start();
+    this.engine.log(`🎲 Game started vs System AI! Stake: 🪙${bet.toLocaleString()} | Winner Pot: 🪙${this.matchPot.toLocaleString()}`);
+    this.render();
+    return true;
   }
 
   async checkUrlRoomParam() {
@@ -477,7 +513,14 @@ class BharakhattaApp {
 
     let modalsHtml = "";
     if (this.loginModalOpen) {
-      modalsHtml += renderLoginModal(true, "", "", this.loginError);
+      modalsHtml += renderLoginModal(true, "", "", "", this.loginError);
+    } else if (this.inLobby) {
+      modalsHtml += renderLobbyView({
+        user: userManager.getCurrentUser(),
+        walletCoins: wallet.getBalance(),
+        selectedBet: this.selectedBet,
+        selectedMode: this.lobbyMode
+      });
     }
     if (this.profileModalOpen) {
       const user = userManager.getCurrentUser();
@@ -615,33 +658,75 @@ class BharakhattaApp {
       };
     }
 
-    // Send Chat Message
+    // Send Chat Message / Smilies / Taunts
     const btnSendChat = document.getElementById("btn-send-chat");
     const inputChatText = document.getElementById("input-chat-text");
-    const doSendChat = () => {
-      if (!inputChatText) return;
-      const text = inputChatText.value.trim();
+    const doSendChat = (customText = null) => {
+      let text = customText;
+      if (!text && inputChatText) {
+        text = inputChatText.value.trim();
+        inputChatText.value = "";
+      }
       if (!text) return;
-      const myName = this.mpState.myPlayerId === 2 ? "Player 2" : "Player 1";
-      this.mpClient.sendChat(text, myName);
-      inputChatText.value = "";
+
+      const user = userManager.getCurrentUser();
+      const myName = user ? (user.nickName || user.name) : (this.mpState.myPlayerId === 2 ? "Player 2" : "Player 1");
+
+      if (this.mpState.roomCode) {
+        this.mpClient.sendChat(text, myName);
+      } else {
+        // Solo play vs AI
+        const msg = {
+          senderId: 1,
+          senderName: myName,
+          text,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        };
+        this.handleChatReceived(msg);
+
+        // System AI responses with fun village banter
+        if (this.engine.players && this.engine.players[1] && this.engine.players[1].isAI) {
+          setTimeout(() => {
+            const aiReplies = [
+              "బాగుంది! కానీ సెంటర్ హోమ్ నాదే! (Nice! But the Center is mine!) 🦚",
+              "కట్టా పడకుండా జాగ్రత్త మిత్రమా! (Watch out for Katta strike!) 💥",
+              "హాహా! బాఱ 12 పడితే నేనే విజేత! (Haha! If I roll Baara 12, I win!) 🎲",
+              "మంచి మూవ్! చూద్దాం ఎవరు గెలుస్తారో! (Good move! Let's see who wins!) 👑",
+              "గువ్వలు నా వైపే ఉన్నాయి! (The cowries favor me!) 🐚"
+            ];
+            const reply = aiReplies[Math.floor(Math.random() * aiReplies.length)];
+            this.handleChatReceived({
+              senderId: 2,
+              senderName: "System AI 🦚",
+              text: reply,
+              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            });
+          }, 650);
+        }
+      }
     };
-    if (btnSendChat) btnSendChat.onclick = doSendChat;
+
+    if (btnSendChat) btnSendChat.onclick = () => doSendChat();
     if (inputChatText) {
       inputChatText.onkeydown = (e) => {
         if (e.key === "Enter") doSendChat();
       };
     }
 
+    // Smiley Chip Buttons
+    document.querySelectorAll(".btn-smiley-chip").forEach(btn => {
+      btn.onclick = () => {
+        const emoji = btn.getAttribute("data-emoji");
+        if (emoji) doSendChat(emoji);
+      };
+    });
+
     // Quick Taunt Buttons
     document.querySelectorAll(".btn-quick-taunt").forEach(btn => {
       btn.onclick = () => {
         const idx = parseInt(btn.getAttribute("data-taunt-index"), 10);
         const taunt = QUICK_TAUNTS[idx];
-        if (taunt) {
-          const myName = this.mpState.myPlayerId === 2 ? "Player 2" : "Player 1";
-          this.mpClient.sendChat(taunt.text, myName);
-        }
+        if (taunt) doSendChat(taunt.text);
       };
     });
 
@@ -829,16 +914,14 @@ class BharakhattaApp {
       };
     }
 
-    // Victory Rematch
+    // Victory Rematch / Next Game -> Return to Match Lobby
     const btnVictoryRestart = document.getElementById("btn-victory-restart");
     if (btnVictoryRestart) {
       btnVictoryRestart.onclick = () => {
-        this.engine.initGame();
         this.winnerAwarded = false;
-        this.turnTimer.start();
-        if (this.mpState.roomCode) {
-          this.mpClient.sendRestart();
-        }
+        this.turnTimer.stop();
+        this.inLobby = true;
+        this.render();
       };
     }
 
@@ -852,23 +935,36 @@ class BharakhattaApp {
       };
     }
 
-    // Login Submission
+    // Login Submission & Live Nickname Preview
     const btnSubmitLogin = document.getElementById("btn-submit-login");
     const inputLoginMobile = document.getElementById("input-login-mobile");
-    const inputLoginName = document.getElementById("input-login-name");
+    const inputLoginFull = document.getElementById("input-login-fullname");
+    const inputLoginNick = document.getElementById("input-login-nickname");
+    const nickPreviewBadge = document.getElementById("nickname-preview-badge");
+
+    const updateNickPreview = () => {
+      if (!nickPreviewBadge) return;
+      const fullVal = inputLoginFull ? inputLoginFull.value : "";
+      const nickVal = inputLoginNick ? inputLoginNick.value : "";
+      nickPreviewBadge.textContent = computeNickName(fullVal, nickVal);
+    };
+    if (inputLoginFull) inputLoginFull.oninput = updateNickPreview;
+    if (inputLoginNick) inputLoginNick.oninput = updateNickPreview;
 
     const doLogin = () => {
       if (!inputLoginMobile) return;
       const mob = inputLoginMobile.value;
-      const name = inputLoginName ? inputLoginName.value : "";
-      const res = userManager.login(mob, name);
+      const fullName = inputLoginFull ? inputLoginFull.value : "";
+      const nickName = inputLoginNick ? inputLoginNick.value : "";
+      const res = userManager.login(mob, fullName, nickName);
       if (res.success) {
         this.loginModalOpen = false;
         this.loginError = null;
+        this.inLobby = true; // Enter lobby so user selects pot coins before starting game!
         if (this.engine.players && this.engine.players[0]) {
-          this.engine.players[0].name = res.user.name;
+          this.engine.players[0].name = res.user.nickName || res.user.name;
         }
-        this.engine.log(`👤 Logged in as ${res.user.name} (+91 ${res.user.mobile}). ${res.isNewUser ? "🪙1,000 joining bonus credited!" : "Profile & history restored."}`);
+        this.engine.log(`👤 Logged in as ${res.user.nickName || res.user.name}. ${res.isNewUser ? "🪙1,000 joining bonus credited!" : "Profile & history restored."}`);
         this.render();
       } else {
         this.loginError = res.error;
@@ -880,6 +976,69 @@ class BharakhattaApp {
     if (inputLoginMobile) {
       inputLoginMobile.onkeydown = (e) => {
         if (e.key === "Enter") doLogin();
+      };
+    }
+    if (inputLoginFull) {
+      inputLoginFull.onkeydown = (e) => {
+        if (e.key === "Enter") doLogin();
+      };
+    }
+    if (inputLoginNick) {
+      inputLoginNick.onkeydown = (e) => {
+        if (e.key === "Enter") doLogin();
+      };
+    }
+
+    // Lobby View Listeners
+    const btnModeSolo = document.getElementById("btn-select-mode-solo");
+    const btnModeFriend = document.getElementById("btn-select-mode-friend");
+    if (btnModeSolo) {
+      btnModeSolo.onclick = () => {
+        this.lobbyMode = "solo";
+        this.render();
+      };
+    }
+    if (btnModeFriend) {
+      btnModeFriend.onclick = () => {
+        this.lobbyMode = "friend";
+        this.render();
+      };
+    }
+
+    document.querySelectorAll(".btn-lobby-tier").forEach(tierBtn => {
+      tierBtn.onclick = () => {
+        const betVal = parseInt(tierBtn.getAttribute("data-bet"), 10);
+        if (betVal) {
+          this.selectedBet = betVal;
+          this.render();
+        }
+      };
+    });
+
+    const btnLobbyStartGame = document.getElementById("btn-lobby-start-game");
+    if (btnLobbyStartGame) {
+      btnLobbyStartGame.onclick = () => {
+        this.startGame(this.lobbyMode, this.selectedBet);
+      };
+    }
+
+    const btnLobbyProfile = document.getElementById("btn-lobby-profile");
+    if (btnLobbyProfile) btnLobbyProfile.onclick = () => { this.profileModalOpen = true; this.render(); };
+
+    const btnLobbyRules = document.getElementById("btn-lobby-rules");
+    if (btnLobbyRules) btnLobbyRules.onclick = () => { this.rulesOpen = true; this.render(); };
+
+    const btnLobbyHistory = document.getElementById("btn-lobby-history");
+    if (btnLobbyHistory) btnLobbyHistory.onclick = () => { this.profileModalOpen = true; this.render(); };
+
+    const btnLobbySwitchAcc = document.getElementById("btn-lobby-switch-acc");
+    if (btnLobbySwitchAcc) {
+      btnLobbySwitchAcc.onclick = () => {
+        userManager.logout();
+        this.inLobby = false;
+        this.loginModalOpen = true;
+        this.loginError = null;
+        this.render();
       };
     }
 
@@ -896,6 +1055,7 @@ class BharakhattaApp {
       btnSwitchAccount.onclick = () => {
         userManager.logout();
         this.profileModalOpen = false;
+        this.inLobby = false;
         this.loginModalOpen = true;
         this.loginError = null;
         this.render();
@@ -932,22 +1092,20 @@ class BharakhattaApp {
         }
 
         this.exitModalOpen = false;
-        this.engine.initGame();
-        this.winnerAwarded = false;
-        this.turnTimer.start();
+        this.turnTimer.stop();
+        this.inLobby = true;
         this.engine.log("🚪 You exited the match.");
         this.render();
       };
     }
 
-    // Inactivity Dismissal
+    // Inactivity Dismissal -> Return to Lobby
     const btnInactivityDismiss = document.getElementById("btn-inactivity-dismiss");
     if (btnInactivityDismiss) {
       btnInactivityDismiss.onclick = () => {
         this.inactivityModalOpen = false;
-        this.engine.initGame();
-        this.winnerAwarded = false;
-        this.turnTimer.start();
+        this.turnTimer.stop();
+        this.inLobby = true;
         this.render();
       };
     }

@@ -198,26 +198,15 @@ export class BharakhattaEngine {
     const jailCoins = this.getJailCoins(teamId);
     const path = getPlayerPath(teamId, this.pathStyle);
 
-    // Rule: Can release from jail on 1, 5, 6, 12
-    const canReleaseFromJail = (score === 1 || score === 5 || score === 6 || score === 12) && jailCoins.length > 0;
+    // Rule: Can release from jail ONLY on roll of 1 (Okkati), releasing exactly 1 coin
+    const canReleaseFromJail = (score === 1) && jailCoins.length > 0;
 
     if (canReleaseFromJail) {
-      // How many coins can be released?
-      // Roll 1: release 1 coin
-      // Roll 5: release up to 5 coins (or all available in jail)
-      // Roll 6: release up to 6 coins
-      // Roll 12: release up to 6 coins
-      let maxRelease = 1;
-      if (score === 5) maxRelease = Math.min(5, jailCoins.length);
-      else if (score === 6 || score === 12) maxRelease = Math.min(6, jailCoins.length);
-
       moves.push({
         type: "RELEASE_JAIL",
         coin: jailCoins[0],
-        count: maxRelease,
-        description: maxRelease > 1 
-          ? `Release ${maxRelease} coins from Jail to Home base` 
-          : `Release 1 coin (#${jailCoins[0].num}) from Jail to Home base`
+        count: 1,
+        description: `Release 1 coin (#${jailCoins[0].num}) from Jail to Home base`
       });
     }
 

@@ -1,4 +1,4 @@
-﻿// In-Game Real-Time Chat Drawer & Floating Chat Bubbles
+// In-Game Real-Time Chat Drawer & Floating Chat Bubbles
 
 export const QUICK_TAUNTS = [
   { emoji: '🎲', label: 'బాఱ! (Baara 12!)', text: 'బాఱ! (Baara 12!) 🎲' },
@@ -11,11 +11,13 @@ export const QUICK_TAUNTS = [
   { emoji: '🔥', label: 'I will win!', text: 'Center Home is mine! 🔥' }
 ];
 
+export const SMILIES_LIST = ['😀', '😂', '🤣', '😎', '🥳', '🔥', '👏', '🎲', '💥', '🏃', '⏳', '👑', '🪙', '🤝', '🎯', '🤩'];
+
 export function renderChatDrawer(isOpen, messages = [], myPlayerId = 1) {
   if (!isOpen) return '';
 
   const messagesHtml = messages.length === 0
-    ? '<div class="chat-empty-state">💬 Send a quick village taunt or chat message to your friend!</div>'
+    ? '<div class="chat-empty-state">💬 Send a smiley, village taunt, or chat message!</div>'
     : messages.map(m => {
         const isMe = m.senderId === myPlayerId;
         return `
@@ -34,17 +36,27 @@ export function renderChatDrawer(isOpen, messages = [], myPlayerId = 1) {
           <div class="modal-title-wrap">
             <span class="modal-icon">💬</span>
             <div>
-              <h2 class="modal-title">In-Game Live Chat</h2>
-              <span class="modal-subtitle">Talk & react with your friend</span>
+              <h2 class="modal-title">Live Chat & Reactions</h2>
+              <span class="modal-subtitle">Chat, smileys & village taunts</span>
             </div>
           </div>
           <button class="btn-close-modal" id="btn-close-chat">&times;</button>
         </div>
 
         <div class="chat-body">
+          <!-- Quick Smilies Bar -->
+          <div class="smilies-bar-section">
+            <div class="smilies-bar-title">😀 Tap a Smiley to send:</div>
+            <div class="smilies-bar-row">
+              ${SMILIES_LIST.map(emoji => `
+                <button class="btn-smiley-chip" data-emoji="${emoji}" title="${emoji}">${emoji}</button>
+              `).join('')}
+            </div>
+          </div>
+
           <!-- Quick Village Taunts -->
           <div class="quick-taunts-section">
-            <div class="quick-taunts-title">⚡ Quick Reactions:</div>
+            <div class="quick-taunts-title">⚡ Quick Village Taunts:</div>
             <div class="quick-taunts-grid">
               ${QUICK_TAUNTS.map((t, idx) => `
                 <button class="btn-quick-taunt" data-taunt-index="${idx}">

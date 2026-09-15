@@ -1,46 +1,41 @@
 // Mobile Number Login Modal Component for Bharakhatta
-// Handles mobile number input, instant validation, and existing user detection
+// Handles 10-digit mobile number, Full Name, and Nick Name generation
 
-export function renderLoginModal(isOpen, currentMobile = "", currentName = "", error = null) {
+export function renderLoginModal(isOpen, currentMobile = "", currentFullName = "", currentNickName = "", error = null) {
   if (!isOpen) return "";
 
   return `
     <div class="modal-backdrop" id="login-modal-backdrop">
-      <div class="modal-dialog modal-login">
-        <div class="modal-header">
-          <div class="modal-title-wrap">
-            <span class="modal-icon">📱</span>
+      <div class="modal-dialog modal-login modal-login-redesign">
+        <div class="modal-header login-header-styled">
+          <div class="login-brand-banner">
+            <span class="login-brand-icon">🐚</span>
             <div>
-              <h2 class="modal-title">Player Login</h2>
-              <span class="modal-subtitle">Enter your mobile number to load your saved coins & match history</span>
+              <h2 class="login-main-title">బాఱఖట్టా • BHARAKHATTA</h2>
+              <span class="login-sub-title">Traditional Indian Village Board Game</span>
             </div>
           </div>
         </div>
 
-        <div class="modal-body">
-          <div class="login-banner">
-            <div class="login-perk">
-              <span class="perk-icon">🪙</span>
-              <div>
-                <strong>1,000 Bonus Coins</strong>
-                <p>Credited for new players</p>
-              </div>
+        <div class="modal-body login-body-styled">
+          <div class="login-perks-row">
+            <div class="perk-pill">
+              <span class="perk-ico">🪙</span>
+              <span><strong>1,000 Coins</strong> Joining Bonus</span>
             </div>
-            <div class="login-perk">
-              <span class="perk-icon">📊</span>
-              <div>
-                <strong>Persistent History</strong>
-                <p>All wins, kills & coins saved on your number</p>
-              </div>
+            <div class="perk-pill">
+              <span class="perk-ico">📜</span>
+              <span><strong>Lifetime Stats</strong> & History Saved</span>
             </div>
           </div>
 
           ${error ? `<div class="login-error-box">⚠️ ${error}</div>` : ""}
 
+          <!-- Mobile Number -->
           <div class="form-group">
             <label for="input-login-mobile" class="form-label">
-              <span>Mobile Number (10 Digits)</span>
-              <span class="label-badge">Required</span>
+              <span>📱 Mobile Number</span>
+              <span class="label-badge required">10 Digits</span>
             </label>
             <div class="mobile-input-wrapper">
               <span class="country-prefix">+91</span>
@@ -56,27 +51,48 @@ export function renderLoginModal(isOpen, currentMobile = "", currentName = "", e
                 required
               />
             </div>
-            <span class="input-hint" id="login-number-hint">Existing players will have all match records restored automatically</span>
+            <span class="input-hint">Existing players restore all saved coins, win rate & match history</span>
           </div>
 
+          <!-- Full Name -->
           <div class="form-group">
-            <label for="input-login-name" class="form-label">
-              <span>Display Name</span>
+            <label for="input-login-fullname" class="form-label">
+              <span>👤 Full Name</span>
+              <span class="label-badge required">Required</span>
+            </label>
+            <input 
+              type="text" 
+              id="input-login-fullname" 
+              class="form-input" 
+              placeholder="e.g. Mahesh Reddy or maheshreddy" 
+              maxlength="30"
+              value="${currentFullName}" 
+            />
+          </div>
+
+          <!-- Nick Name -->
+          <div class="form-group">
+            <label for="input-login-nickname" class="form-label">
+              <span>🏷️ Nick Name</span>
               <span class="label-badge optional">Optional</span>
             </label>
             <input 
               type="text" 
-              id="input-login-name" 
+              id="input-login-nickname" 
               class="form-input" 
-              placeholder="e.g. Maheshwar or King" 
-              maxlength="20"
-              value="${currentName}" 
+              placeholder="Leave blank for auto-initials (e.g. MR or M)" 
+              maxlength="15"
+              value="${currentNickName}" 
             />
+            <div class="nickname-preview-box">
+              <span>Game In-Game Name: </span>
+              <strong id="nickname-preview-badge" class="preview-badge">${currentNickName || "MR"}</strong>
+            </div>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn-primary btn-block btn-start-game" id="btn-submit-login">
+        <div class="modal-footer login-footer-centered">
+          <button class="btn-primary btn-enter-bharakhatta" id="btn-submit-login">
             🎮 Enter Bharakhatta
           </button>
         </div>

@@ -25,6 +25,20 @@ const storage = {
   }
 };
 
+export function computeNickName(fullName, customNickName) {
+  if (customNickName && customNickName.trim()) {
+    return customNickName.trim();
+  }
+  if (!fullName || !fullName.trim()) {
+    return "Player";
+  }
+  // Split by whitespace: each word contributes its first letter in uppercase
+  // Example: "Mahesh Reddy" -> "MR", "maheshreddy" -> "M", "Mahesh Kumar Reddy" -> "MKR"
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Player";
+  return parts.map(p => p[0].toUpperCase()).join("");
+}
+
 export class UserManager {
   constructor() {
     this.currentUser = null;
@@ -64,7 +78,13 @@ export class UserManager {
     try {
       const raw = storage.getItem(`bk_user_${cleaned}`);
       if (raw) {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        // Ensure nickName is always populated
+        if (!parsed.nickName) {
+          parsed.nickName = computeNickName(parsed.fullName || parsed.name || "", "");
+        }
+        parsed.name = parsed.nickName;
+        return parsed;
       }
     } catch (e) {
       console.error("Failed to parse user profile:", e);
@@ -82,20 +102,28 @@ export class UserManager {
     }
   }
 
-  login(mobileInput, nameInput = "Player") {
+  login(mobileInput, fullNameInput = "", nickNameInput = "") {
     const mobile = this.cleanMobile(mobileInput);
     if (!mobile || mobile.length !== 10) {
       return { success: false, error: "Please enter a valid 10-digit mobile number." };
     }
 
-    const name = (nameInput || "").trim() || `Player ${mobile.slice(-4)}`;
+    const fullName = (fullNameInput || "").trim();
+    const nickName = computeNickName(fullName, nickNameInput);
     const existing = this.loadUserProfile(mobile);
 
     if (existing) {
       // Existing User!
       existing.lastLoginAt = Date.now();
-      if (nameInput && nameInput.trim()) {
-        existing.name = nameInput.trim();
+      if (fullName) {
+        existing.fullName = fullName;
+      }
+      if (nickNameInput && nickNameInput.trim()) {
+        existing.nickName = nickNameInput.trim();
+        existing.name = existing.nickName;
+      } else if (!existing.nickName) {
+        existing.nickName = nickName;
+        existing.name = nickName;
       }
       this.currentUser = existing;
       storage.setItem(CURRENT_USER_KEY, mobile);
@@ -109,14 +137,16 @@ export class UserManager {
         success: true,
         isNewUser: false,
         user: this.currentUser,
-        message: `Welcome back, ${this.currentUser.name}! (Existing player on ${mobile})`
+        message: `Welcome back, ${this.currentUser.nickName}! (Existing player)`
       };
     }
 
     // Brand New User!
     const newUser = {
       mobile,
-      name,
+      fullName: fullName || "Player",
+      nickName: nickName,
+      name: nickName,
       joinedAt: Date.now(),
       lastLoginAt: Date.now(),
       walletBalance: 1000,
@@ -147,7 +177,7 @@ export class UserManager {
       success: true,
       isNewUser: true,
       user: newUser,
-      message: `Welcome, ${name}! 🪙1,000 joining bonus credited to ${mobile}!`
+      message: `Welcome, ${newUser.nickName}! 🪙1,000 joining bonus credited!`
     };
   }
 

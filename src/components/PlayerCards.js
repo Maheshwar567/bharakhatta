@@ -20,36 +20,40 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
           <span class="logo-icon">🐚</span>
           <div>
             <h1 class="brand-title">BHARAKHATTA</h1>
-            <span class="brand-subtitle">బాఱఖట్టా • Village Cowrie Board</span>
+            <span class="brand-subtitle">బాఱఖట్టా</span>
           </div>
         </div>
 
-        <!-- Wallet Coins Chip -->
-        <div class="wallet-header-pill" id="btn-open-wallet" title="Your Coin Wallet (Click to change bet)">
-          <span class="coin-icon">🪙</span>
-          <span class="coin-bal">${walletCoins.toLocaleString()}</span>
+        <!-- Formatted Top Line: Game Coins - Login Name (Nick) - Pot Coins -->
+        <div class="header-economy-bar" id="game-header-bar">
+          <div class="econ-pill econ-wallet" id="btn-open-wallet" title="Your Game Coins (Click to view wallet / bet)">
+            <span class="econ-icon">🪙</span>
+            <span class="econ-label">Game Coins:</span>
+            <strong class="econ-val">${walletCoins.toLocaleString()}</strong>
+          </div>
+
+          <span class="econ-sep">•</span>
+
+          ${options.user ? `
+            <div class="econ-pill econ-user" id="btn-open-profile" title="Player Profile & Lifetime History">
+              <span class="econ-icon">👤</span>
+              <span class="econ-label">Name:</span>
+              <strong class="econ-val econ-nick">${options.user.nickName || options.user.name}</strong>
+            </div>
+          ` : `
+            <button class="btn-login-header" id="btn-header-login" title="Login with Mobile Number">
+              📱 Login
+            </button>
+          `}
+
+          <span class="econ-sep">•</span>
+
+          <div class="econ-pill econ-pot" id="btn-open-bet" title="Total Match Pot to Win">
+            <span class="econ-icon">🏆</span>
+            <span class="econ-label">Pot Coins:</span>
+            <strong class="econ-val">🪙${matchPot.toLocaleString()}</strong>
+          </div>
         </div>
-
-        <!-- User Profile Badge -->
-        ${options.user ? `
-          <div class="user-header-pill" id="btn-open-profile" title="Player Profile & Match History (Click to view)">
-            <span class="user-icon">👤</span>
-            <span class="user-name-short">${options.user.name}</span>
-            <span class="user-mob-badge">📱..${options.user.mobile.slice(-4)}</span>
-          </div>
-        ` : `
-          <button class="btn-login-header" id="btn-header-login" title="Login with Mobile Number">
-            📱 Login
-          </button>
-        `}
-
-        <!-- Match Pot Badge (if bet is active) -->
-        ${matchPot > 0 ? `
-          <div class="pot-header-badge" title="Total Match Pot">
-            <span class="pot-icon">🏆</span>
-            <span class="pot-val">Pot: 🪙${matchPot.toLocaleString()}</span>
-          </div>
-        ` : ""}
 
         <!-- Room Indicator -->
         ${inOnlineRoom ? `
@@ -67,12 +71,10 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
           <span class="timer-seconds">${timeLeft}s</span>
         </div>
 
-        <!-- Show Chat button when paired in multiplayer -->
-        ${isPaired ? `
-          <button id="btn-open-chat" class="btn-icon btn-chat-glow" title="In-Game Live Chat">
-            💬 Chat ${unreadChatCount > 0 ? `<span class="chat-badge">${unreadChatCount}</span>` : ""}
-          </button>
-        ` : ""}
+        <!-- In-Game Chat Button (Always available for smilies & text) -->
+        <button id="btn-open-chat" class="btn-icon btn-chat-glow" title="In-Game Live Chat & Smilies">
+          💬 Chat ${unreadChatCount > 0 ? `<span class="chat-badge">${unreadChatCount}</span>` : ""}
+        </button>
 
         <!-- Only show 'Play with Friend' when NOT yet paired -->
         ${!isPaired ? `

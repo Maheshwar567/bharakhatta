@@ -5,9 +5,9 @@ export const SCORE_NAMES = {
   2: { te: "Rendu", en: "Two", isBonus: false, releasesCoins: 0 },
   3: { te: "Moodu", en: "Three", isBonus: false, releasesCoins: 0 },
   4: { te: "Naalugu", en: "Four", isBonus: false, releasesCoins: 0 },
-  5: { te: "Aidu", en: "Five", isBonus: true, releasesCoins: 5 },
-  6: { te: "Aaru", en: "Six", isBonus: true, releasesCoins: 6 },
-  12: { te: "Baara", en: "Twelve (Baara!)", isBonus: true, releasesCoins: 6 }
+  5: { te: "Aidu", en: "Five", isBonus: true, releasesCoins: 0 },
+  6: { te: "Aaru", en: "Six", isBonus: true, releasesCoins: 0 },
+  12: { te: "Baara", en: "Twelve (Baara!)", isBonus: true, releasesCoins: 0 }
 };
 
 export class CowrieDice {
@@ -86,7 +86,7 @@ export class CowrieDice {
   rollDie() {
     const score = Math.floor(Math.random() * 6) + 1;
     const isBonus = score === 1 || score === 5 || score === 6;
-    const releasesCoins = score === 1 ? 1 : score === 5 ? 5 : score === 6 ? 6 : 0;
+    const releasesCoins = score === 1 ? 1 : 0;
     const info = SCORE_NAMES[score];
 
     return {

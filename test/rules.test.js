@@ -12,7 +12,7 @@ if (typeof globalThis.localStorage === "undefined") {
 import { BharakhattaEngine, GAME_STATUS } from "../src/game/engine.js";
 import { CowrieDice } from "../src/game/cowries.js";
 import { getPlayerPath, isSafeSquare } from "../src/game/board.js";
-import { UserManager } from "../src/game/userManager.js";
+import { UserManager, computeNickName } from "../src/game/userManager.js";
 import { wallet } from "../src/game/wallet.js";
 
 function runTests() {
@@ -49,13 +49,13 @@ function runTests() {
   assert(roll4.score === 4 && roll4.isBonus === false && roll4.releasesCoins === 0, "Roll 4 is Naalugu, no bonus, no release");
 
   const roll5 = dice.roll(5);
-  assert(roll5.score === 5 && roll5.isBonus === true && roll5.releasesCoins === 5, "Roll 5 is Aidu, grants bonus and releases up to 5 coins");
+  assert(roll5.score === 5 && roll5.isBonus === true && roll5.releasesCoins === 0, "Roll 5 is Aidu, grants bonus, releases 0 coins");
 
   const roll6 = dice.roll(6);
-  assert(roll6.score === 6 && roll6.isBonus === true && roll6.releasesCoins === 6, "Roll 6 is Aaru, grants bonus and releases up to 6 coins");
+  assert(roll6.score === 6 && roll6.isBonus === true && roll6.releasesCoins === 0, "Roll 6 is Aaru, grants bonus, releases 0 coins");
 
   const roll12 = dice.roll(12);
-  assert(roll12.score === 12 && roll12.isBonus === true && roll12.releasesCoins === 6, "Roll 12 (all backs) is Baara!, grants bonus and releases coins");
+  assert(roll12.score === 12 && roll12.isBonus === true && roll12.releasesCoins === 0, "Roll 12 (all backs) is Baara!, grants bonus, releases 0 coins");
 
   // 2. Test 1,000 Random Rolls
   console.log("\n--- Test 2: Statistical Distribution (1,000 rolls) ---");
@@ -92,13 +92,13 @@ function runTests() {
   const movesRoll3 = engine.getLegalMoves(1, 3);
   assert(movesRoll3.length === 0, "Roll of 3 with all coins in jail gives 0 legal moves");
 
-  // Roll 1 should allow releasing 1 coin
+  // Roll 5 should NOT allow releasing coins from jail (User explicit rule: only roll 1 releases!)
+  const movesRoll5 = engine.getLegalMoves(1, 5);
+  assert(movesRoll5.length === 0, "Roll of 5 with all coins in jail gives 0 legal moves (does NOT release from jail)");
+
+  // Roll 1 should allow releasing exactly 1 coin
   const movesRoll1 = engine.getLegalMoves(1, 1);
   assert(movesRoll1.length === 1 && movesRoll1[0].type === "RELEASE_JAIL" && movesRoll1[0].count === 1, "Roll of 1 allows releasing 1 coin from jail");
-
-  // Roll 5 should allow releasing up to 5 coins
-  const movesRoll5 = engine.getLegalMoves(1, 5);
-  assert(movesRoll5.length === 1 && movesRoll5[0].type === "RELEASE_JAIL" && movesRoll5[0].count === 5, "Roll of 5 allows releasing up to 5 coins from jail");
 
   // Simulate resolving a roll of 1
   engine.currentRoll = { score: 1, isBonus: true };
@@ -192,18 +192,27 @@ function runTests() {
   assert(engine2.checkWinCondition(1) === true, "Team 1 wins when all 6 coins reach Center Sanctum (Final Home)");
   assert(engine2.checkWinCondition(2) === false, "Team 2 has not won");
 
-  // 10. Test Mobile Number Login, Existing User Recognition, and Lifetime Stats
-  console.log("\n--- Test 10: Mobile Number Login & Persistence ---");
+  // 10. Test Mobile Number Login, Nick Name Generation, and Persistence
+  console.log("\n--- Test 10: Mobile Number Login & Nick Name Persistence ---");
+  
+  // Test Nick Name derivation logic
+  assert(computeNickName("Mahesh Reddy", "") === "MR", "Mahesh Reddy derives nickname 'MR'");
+  assert(computeNickName("maheshreddy", "") === "M", "maheshreddy derives nickname 'M'");
+  assert(computeNickName("Mahesh Kumar Reddy", "") === "MKR", "Mahesh Kumar Reddy derives nickname 'MKR'");
+  assert(computeNickName("Mahesh Reddy", "Mahi") === "Mahi", "Custom nickname 'Mahi' overrides auto-initials");
+
   const um = new UserManager();
 
   // Test invalid mobile input
   const invalidLogin = um.login("12345");
   assert(invalidLogin.success === false, "Fails login on invalid phone number length");
 
-  // Test new user registration
+  // Test new user registration with full name "Mahesh Reddy" and blank nickname
   const user1Mobile = "9876543210";
-  const login1 = um.login(user1Mobile, "Ravi Kumar");
+  const login1 = um.login(user1Mobile, "Mahesh Reddy", "");
   assert(login1.success === true && login1.isNewUser === true, "First time login succeeds and creates new user");
+  assert(login1.user.nickName === "MR", "User nickName auto-derived as 'MR'");
+  assert(login1.user.name === "MR", "In-game display name is strictly the Nick Name ('MR')");
   assert(wallet.getBalance() === 1000, "New user receives 1,000 joining bonus");
 
   // Win some coins
@@ -228,8 +237,9 @@ function runTests() {
 
   // Simulate logging out / logging back in with SAME mobile number
   um.currentUser = null;
-  const loginAgain = um.login(user1Mobile, "Ravi Kumar");
+  const loginAgain = um.login(user1Mobile, "Mahesh Reddy", "");
   assert(loginAgain.success === true && loginAgain.isNewUser === false, "Recognized as existing user on 2nd login with same number");
+  assert(loginAgain.user.nickName === "MR", "Existing user retains nickname 'MR'");
   assert(wallet.getBalance() === 1500, "Existing user restores previous wallet balance (1500)");
   assert(um.getHistory(user1Mobile).length === 1, "Existing user maintains complete match history");
 
