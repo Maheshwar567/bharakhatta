@@ -58,14 +58,17 @@ class BharakhattaApp {
       }
     });
 
+    this.initDOM();
+
     this.engine = new BharakhattaEngine({
       gameMode: "2p",
       diceMode: "cowries",
-      onStateChange: () => this.render(),
+      onStateChange: () => {
+        if (this.engine) this.render();
+      },
       onLog: (entry) => this.addLog(entry)
     });
 
-    this.initDOM();
     this.bindGlobalKeys();
     this.initMobileAudioUnlock();
     this.checkUrlRoomParam();
@@ -269,6 +272,7 @@ class BharakhattaApp {
   }
 
   render() {
+    if (!this.engine) return;
     const state = this.engine.getStateSnapshot();
 
     const headerEl = document.getElementById("header-container");
