@@ -123,11 +123,11 @@ export const CLASSIC_PATH_TEAM2 = [
   ...HOME_COLUMN_TEAM2
 ].map((pt, idx) => ({ ...pt, step: idx }));
 
-export function getPlayerPath(teamId, pathStyle = "classic") {
-  if (pathStyle === "spiral") {
-    return teamId === 1 ? SPIRAL_PATH_TEAM1 : SPIRAL_PATH_TEAM2;
+export function getPlayerPath(teamId, pathStyle = "spiral") {
+  if (pathStyle === "classic") {
+    return teamId === 1 ? CLASSIC_PATH_TEAM1 : CLASSIC_PATH_TEAM2;
   }
-  return teamId === 1 ? CLASSIC_PATH_TEAM1 : CLASSIC_PATH_TEAM2;
+  return teamId === 1 ? SPIRAL_PATH_TEAM1 : SPIRAL_PATH_TEAM2;
 }
 
 // Jail coordinates (visual representation outside top and bottom edges)

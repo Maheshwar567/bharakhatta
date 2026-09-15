@@ -1,4 +1,4 @@
-﻿// Main application coordinator for Bharakhatta
+// Main application coordinator for Bharakhatta
 // Single-screen mobile layout, 30s Turn Timer, In-Game Chat & Virtual Coin Betting
 
 import "./styles/app.css";
@@ -76,6 +76,7 @@ class BharakhattaApp {
       onSyncRestart: () => this.handleRemoteRestart(),
       onChatReceived: (chatMsg) => this.handleChatReceived(chatMsg),
       onBetSynced: (bet) => this.handleBetSynced(bet),
+      onSyncTimeoutPass: (msg) => this.handleRemoteTimeoutPass(msg),
       onError: (msg) => {
         this.mpState.errorMsg = msg;
         this.render();
@@ -192,17 +193,20 @@ class BharakhattaApp {
       : !state.currentPlayer.isAI;
 
     if (isMyTurn) {
-      this.engine.log(`⏰ Time's up (30s)! Auto-playing for ${state.currentPlayer.name}...`);
-      if (state.status === GAME_STATUS.WAITING_FOR_ROLL) {
-        this.attemptRoll();
-      } else if (state.status === GAME_STATUS.WAITING_FOR_MOVE) {
-        const move = this.engine.getBestLegalMove();
-        if (move) {
-          this.attemptMove(move);
-        } else {
-          this.engine.advanceTurn();
-        }
+      this.engine.log(`⏰ Time's up (30s)! No roll chance. Turn forfeited to next player.`);
+      if (this.mpState.roomCode) {
+        this.mpClient.sendTimeoutPass(this.mpState.myPlayerId);
       }
+      this.turnTimer.reset();
+      this.engine.advanceTurn();
+    } else if (this.mpState.roomCode) {
+      this.engine.log(`⏰ Opponent timed out (30s)! No roll chance. Turn forfeited.`);
+      this.turnTimer.reset();
+      this.engine.advanceTurn();
+    } else if (state.currentPlayer.isAI) {
+      this.engine.log(`⏰ System AI timed out (30s)! Turn forfeited.`);
+      this.turnTimer.reset();
+      this.engine.advanceTurn();
     }
   }
 
@@ -373,6 +377,12 @@ class BharakhattaApp {
     this.turnTimer.start();
     this.engine.log(`🔄 Host restarted the game!`);
     this.render();
+  }
+
+  handleRemoteTimeoutPass(msg) {
+    this.engine.log(`⏰ Opponent timed out (30s)! No roll chance. Turn forfeited.`);
+    this.turnTimer.reset();
+    this.engine.advanceTurn();
   }
 
   render() {

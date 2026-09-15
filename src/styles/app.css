@@ -399,6 +399,63 @@ body {
   border-radius: 2px;
 }
 
+/* Step 23 Gate Squares */
+.cell-gate-step23 {
+  background-color: #fdf5e6;
+}
+
+.cell-gate-step23.gate-t1 {
+  border-left: 2px dashed #e67e22;
+  border-top: 2px dashed #e67e22;
+}
+
+.cell-gate-step23.gate-t2 {
+  border-right: 2px dashed #27ae60;
+  border-bottom: 2px dashed #27ae60;
+}
+
+.gate-marker {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.cell-gate-tag {
+  font-size: 6.5px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #8b4513;
+  background: rgba(255, 235, 180, 0.88);
+  padding: 0 2px;
+  border-radius: 2px;
+  border: 0.5px solid rgba(139, 69, 19, 0.3);
+}
+
+.coin-stopped-23 {
+  border: 1.5px solid #e74c3c !important;
+  box-shadow: 0 0 6px rgba(231, 76, 60, 0.7);
+}
+
+.coin-gate-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 6.5px;
+  font-weight: 900;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
 /* Center Sanctum */
 .cell-center-sanctum {
   background: #fcebd2;

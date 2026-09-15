@@ -23,7 +23,7 @@ export class BharakhattaEngine {
     this.dice = new CowrieDice();
     this.diceMode = options.diceMode || "cowries"; // 'cowries' or 'die'
     this.gameMode = options.gameMode || "2p"; // '2p' (1v1) or '4p' (2v2)
-    this.pathStyle = options.pathStyle || "classic"; // 'classic' (ludo-style home stretch) or 'spiral' (traditional 3-ring spiral)
+    this.pathStyle = options.pathStyle || "spiral"; // 'spiral' (traditional 3-ring spiral) or 'classic'
     this.requireKill = options.requireKill !== undefined ? options.requireKill : true;
 
     this.onStateChange = options.onStateChange || (() => {});
@@ -226,32 +226,39 @@ export class BharakhattaEngine {
     const hasKill = teamId === 1 ? this.team1Kills > 0 : this.team2Kills > 0;
 
     for (const coin of activeCoins) {
+      const finishStep = path.length - 1; // Center Sanctum step (48 in spiral)
+
+      // Step 23 & Inside 5/5 Ring Entry Rule:
+      // Outer perimeter is 24 squares (step 0 to step 23).
+      // If team has 0 kills, coin CANNOT enter the inside 5/5 ring (step 24+).
+      // Coins STOP at step 23 only and remain blocked until at least one kill is made!
+      if (this.requireKill && !hasKill) {
+        if (coin.stepIndex === 23) {
+          // Already stopped at step 23 waiting for kill: cannot move forward
+          continue;
+        } else if (coin.stepIndex < 23 && coin.stepIndex + score >= 23) {
+          // Coin arrives at or reaches step 23: stops at step 23!
+          const targetCoord = path[23];
+          moves.push({
+            type: "MOVE_COIN",
+            coin,
+            fromStep: coin.stepIndex,
+            toStep: 23,
+            targetCoord,
+            isCapture: this.checkWillCapture(teamId, targetCoord),
+            isSafe: targetCoord.safe || isSafeSquare(targetCoord.r, targetCoord.c),
+            description: `Advance coin #${coin.num} to Step 23 (Stopped! Opponent kill needed to enter inside 5/5 ring)`
+          });
+          continue;
+        }
+      }
+
       const targetStep = coin.stepIndex + score;
 
-      // Check if coin reaches or overshoots finish
-      const finishStep = path.length - 1; // Center Sanctum step
-
-      // Check inner ring requirement
-      const outerRingMaxStep = 23;
-      const isTryingToEnterInner = targetStep > outerRingMaxStep;
-
-      if (this.requireKill && !hasKill && isTryingToEnterInner) {
-        // Without a kill, coin must continue looping the outer ring!
-        // Loop back: stepIndex becomes (targetStep % 24)
-        const loopedStep = targetStep % 24;
-        const targetCoord = path[loopedStep];
-        moves.push({
-          type: "MOVE_COIN",
-          coin,
-          fromStep: coin.stepIndex,
-          toStep: loopedStep,
-          targetCoord,
-          looped: true,
-          description: `Advance coin #${coin.num} by ${score} steps (looping outer track, kill needed for inner ring)`
-        });
-      } else if (targetStep < finishStep) {
+      if (targetStep < finishStep) {
         // Normal move along path
         const targetCoord = path[targetStep];
+        const isEnteringInside = coin.stepIndex <= 23 && targetStep > 23;
         moves.push({
           type: "MOVE_COIN",
           coin,
@@ -260,7 +267,9 @@ export class BharakhattaEngine {
           targetCoord,
           isCapture: this.checkWillCapture(teamId, targetCoord),
           isSafe: targetCoord.safe || isSafeSquare(targetCoord.r, targetCoord.c),
-          description: `Move coin #${coin.num} to (${targetCoord.r}, ${targetCoord.c})`
+          description: isEnteringInside
+            ? `Advance coin #${coin.num} into Inside 5/5 Ring (Step ${targetStep})!`
+            : `Move coin #${coin.num} to (${targetCoord.r}, ${targetCoord.c})`
         });
       } else if (targetStep === finishStep) {
         // Exact landing on Center Sanctum: FINISH!
@@ -271,7 +280,7 @@ export class BharakhattaEngine {
           fromStep: coin.stepIndex,
           toStep: finishStep,
           targetCoord,
-          description: `Goal! Coin #${coin.num} enters the Center Sanctum!`
+          description: `Goal! Coin #${coin.num} enters the Center Sanctum (Final Home)!`
         });
       }
       // If targetStep > finishStep: overshot center, cannot move this coin with this roll
@@ -289,7 +298,7 @@ export class BharakhattaEngine {
   }
 
   // Execute a selected move
-  executeMove(move, force = false) {
+  executeMove(move, force = false, instant = false) {
     if (!force && this.status !== GAME_STATUS.WAITING_FOR_MOVE) return;
 
     this.status = GAME_STATUS.ANIMATING_MOVE;
@@ -328,8 +337,7 @@ export class BharakhattaEngine {
       const endStep = move.toStep;
       const isLooped = move.looped;
 
-      // Animate hop step by step
-      this.animateCoinHop(coin, path, startStep, endStep, isLooped, () => {
+      const onHopDone = () => {
         coin.stepIndex = endStep;
         coin.coord = { ...move.targetCoord };
 
@@ -360,7 +368,7 @@ export class BharakhattaEngine {
               this.log(`💥 Katta! ${player.name} killed Team ${opponentTeam}'s Coin #${v.num}! Returned to Jail.`);
             });
 
-            this.log(`⚡ Katta strike earned ${player.name} a Bonus Turn! Inner ring unlocked.`);
+            this.log(`⚡ Katta strike earned ${player.name} a Bonus Turn! Inside 5/5 ring unlocked.`);
           }
         }
 
@@ -383,7 +391,13 @@ export class BharakhattaEngine {
         const isBonus = this.currentRoll ? this.currentRoll.isBonus : false;
         const getsBonusTurn = isBonus || captured;
         this.finishMove(getsBonusTurn);
-      });
+      };
+
+      if (instant) {
+        onHopDone();
+      } else {
+        this.animateCoinHop(coin, path, startStep, endStep, isLooped, onHopDone);
+      }
     }
   }
 

@@ -114,6 +114,73 @@ function runTests() {
   assert(isSafeSquare(3, 3), "Center Sanctum (3, 3) is a safe square");
   assert(!isSafeSquare(0, 0), "NW Corner (0, 0) is NOT a safe square (vulnerable to kill!)");
 
+  // 6. Test Authentic Spiral Path (49 Steps)
+  console.log("\n--- Test 6: Spiral Path & 5/5 Inside Ring Alignment ---");
+  const spiralT1 = getPlayerPath(1, "spiral");
+  const spiralT2 = getPlayerPath(2, "spiral");
+  assert(spiralT1.length === 49, `Team 1 Spiral Path has exactly 49 steps (was ${spiralT1.length})`);
+  assert(spiralT2.length === 49, `Team 2 Spiral Path has exactly 49 steps (was ${spiralT2.length})`);
+  
+  // Team 1: Step 0 is Bottom Home (6, 3), Step 23 is Gate (6, 2), Step 24 enters 5/5 (5, 2), Step 48 is Center (3, 3)
+  assert(spiralT1[0].r === 6 && spiralT1[0].c === 3, "Team 1 Step 0 is Home 1 (6, 3)");
+  assert(spiralT1[23].r === 6 && spiralT1[23].c === 2, "Team 1 Step 23 is Gate 23 (6, 2)");
+  assert(spiralT1[24].r === 5 && spiralT1[24].c === 2, "Team 1 Step 24 enters inside 5/5 ring (5, 2)");
+  assert(spiralT1[48].r === 3 && spiralT1[48].c === 3, "Team 1 Step 48 is Center Sanctum (3, 3)");
+
+  // Team 2: Step 0 is Top Home (0, 3), Step 23 is Gate (0, 4), Step 24 enters 5/5 (1, 4), Step 48 is Center (3, 3)
+  assert(spiralT2[0].r === 0 && spiralT2[0].c === 3, "Team 2 Step 0 is Home 2 (0, 3)");
+  assert(spiralT2[23].r === 0 && spiralT2[23].c === 4, "Team 2 Step 23 is Gate 23 (0, 4)");
+  assert(spiralT2[24].r === 1 && spiralT2[24].c === 4, "Team 2 Step 24 enters inside 5/5 ring (1, 4)");
+  assert(spiralT2[48].r === 3 && spiralT2[48].c === 3, "Team 2 Step 48 is Center Sanctum (3, 3)");
+
+  // 7. Test Step 23 Stopping Rule (Zero Kills)
+  console.log("\n--- Test 7: Step 23 Stop Rule (Zero Kills) ---");
+  const engine2 = new BharakhattaEngine({ gameMode: "2p" });
+  assert(engine2.pathStyle === "spiral", "Engine defaults to spiral path");
+
+  // Place a coin at step 20
+  const coinT1 = engine2.coins.find(c => c.team === 1 && c.num === 1);
+  coinT1.inJail = false;
+  coinT1.stepIndex = 20;
+  coinT1.coord = { ...spiralT1[20] };
+
+  // Roll 5 with 0 kills: target 25 overshoots 23 -> must clamp to step 23!
+  const movesRoll5Step20 = engine2.getLegalMoves(1, 5);
+  const moveStep20To23 = movesRoll5Step20.find(m => m.coin.id === coinT1.id);
+  assert(moveStep20To23 && moveStep20To23.toStep === 23, "Coin at step 20 rolling 5 stops at step 23 when team has 0 kills");
+
+  // Move coin to step 23
+  engine2.status = GAME_STATUS.WAITING_FOR_MOVE;
+  engine2.executeMove(moveStep20To23, true, true);
+  assert(coinT1.stepIndex === 23, "Coin is now parked at step 23");
+
+  // When already at step 23 with 0 kills: rolling any score gives 0 moves for this coin!
+  for (const s of [1, 2, 3, 4, 5, 6, 12]) {
+    const movesAt23 = engine2.getLegalMoves(1, s).filter(m => m.coin && m.coin.id === coinT1.id);
+    assert(movesAt23.length === 0, `Coin parked at step 23 has 0 moves on roll of ${s} when kills = 0`);
+  }
+
+  // 8. Test Unlocking 5/5 Ring After a Kill
+  console.log("\n--- Test 8: Inside 5/5 Ring Unlocks After 1 Kill ---");
+  engine2.team1Kills = 1; // Team 1 gets a kill!
+  const movesAt23WithKill = engine2.getLegalMoves(1, 1).filter(m => m.coin && m.coin.id === coinT1.id);
+  assert(movesAt23WithKill.length === 1 && movesAt23WithKill[0].toStep === 24, "Coin at step 23 rolling 1 enters step 24 (Inside 5/5 Ring!) after kill");
+
+  const movesAt23Roll3 = engine2.getLegalMoves(1, 3).filter(m => m.coin && m.coin.id === coinT1.id);
+  assert(movesAt23Roll3.length === 1 && movesAt23Roll3[0].toStep === 26, "Coin at step 23 rolling 3 enters step 26 (Inside 5/5 Ring!) after kill");
+
+  // 9. Test Win Condition (6 Coins into Final Home / Center Sanctum)
+  console.log("\n--- Test 9: 6 Coins in Final Home Win Condition ---");
+  for (let i = 1; i <= 6; i++) {
+    const c = engine2.coins.find(coin => coin.team === 1 && coin.num === i);
+    c.inJail = false;
+    c.isFinished = true;
+    c.stepIndex = 48;
+    c.coord = { r: 3, c: 3 };
+  }
+  assert(engine2.checkWinCondition(1) === true, "Team 1 wins when all 6 coins reach Center Sanctum (Final Home)");
+  assert(engine2.checkWinCondition(2) === false, "Team 2 has not won");
+
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);
   console.log(`===================================\n`);

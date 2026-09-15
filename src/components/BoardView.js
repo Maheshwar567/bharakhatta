@@ -53,11 +53,16 @@ export function renderBoard(gameState, mpState = null) {
         ? validMoves.find(m => m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c)
         : null;
 
+      const isT1Gate = (r === 6 && c === 2);
+      const isT2Gate = (r === 0 && c === 4);
+
       let cellClasses = ["board-cell"];
       if (isSafe) cellClasses.push("cell-safe-katta");
       if (isCenter) cellClasses.push("cell-center-sanctum");
       if (r === 0 && c === 3) cellClasses.push("cell-home-team2");
       if (r === 6 && c === 3) cellClasses.push("cell-home-team1");
+      if (isT1Gate) cellClasses.push("cell-gate-step23", "gate-t1");
+      if (isT2Gate) cellClasses.push("cell-gate-step23", "gate-t2");
       if (matchingMove) cellClasses.push("cell-valid-target");
 
       // Cell interior content: 'X' marking for safe squares or center emblem
@@ -86,6 +91,18 @@ export function renderBoard(gameState, mpState = null) {
             </svg>
             ${(r === 0 && c === 3) ? '<span class="cell-tag">HOME 2</span>' : ""}
             ${(r === 6 && c === 3) ? '<span class="cell-tag">HOME 1</span>' : ""}
+          </div>
+        `;
+      } else if (isT1Gate) {
+        markerHtml = `
+          <div class="gate-marker" title="Gate 23 (Team 1): Coins stop here unless you have killed an opponent!">
+            <span class="cell-gate-tag">GATE 23</span>
+          </div>
+        `;
+      } else if (isT2Gate) {
+        markerHtml = `
+          <div class="gate-marker" title="Gate 23 (Team 2): Coins stop here unless you have killed an opponent!">
+            <span class="cell-gate-tag">GATE 23</span>
           </div>
         `;
       }
@@ -118,7 +135,7 @@ export function renderBoard(gameState, mpState = null) {
           ${isT2Active ? '<span class="jail-turn-pulse">👉 TURN</span>' : ''}
         </div>
         <div class="jail-meta">
-          <span class="meta-kill">⚔️ ${team2Kills} Kills ${team2Kills > 0 ? '🔓' : '🔒'}</span>
+          <span class="meta-kill">⚔️ ${team2Kills} Kills ${team2Kills > 0 ? '🔓 5/5 Open' : '🔒 Gate 23 Stop'}</span>
           <span class="meta-count">${team2JailCoins.length} in Jail</span>
         </div>
       </div>
@@ -150,7 +167,7 @@ export function renderBoard(gameState, mpState = null) {
           ${isT1Active ? '<span class="jail-turn-pulse">👉 TURN</span>' : ''}
         </div>
         <div class="jail-meta">
-          <span class="meta-kill">⚔️ ${team1Kills} Kills ${team1Kills > 0 ? '🔓' : '🔒'}</span>
+          <span class="meta-kill">⚔️ ${team1Kills} Kills ${team1Kills > 0 ? '🔓 5/5 Open' : '🔒 Gate 23 Stop'}</span>
           <span class="meta-count">${team1JailCoins.length} in Jail</span>
         </div>
       </div>
@@ -193,6 +210,7 @@ export function renderBoard(gameState, mpState = null) {
 export function renderCoinPiece(coin, isSelectable, totalInCell = 1, indexInCell = 0, isJail = false) {
   const teamColorClass = coin.team === 1 ? "coin-team1" : "coin-team2";
   const selectableClass = isSelectable ? "coin-selectable" : "";
+  const isStoppedAt23 = coin.stepIndex === 23;
 
   let offsetStyle = "";
   if (!isJail && totalInCell > 1) {
@@ -203,13 +221,18 @@ export function renderCoinPiece(coin, isSelectable, totalInCell = 1, indexInCell
     offsetStyle = `style="transform: translate(${ox}px, ${oy}px); z-index: ${10 + indexInCell};"`;
   }
 
+  const pieceTitle = isStoppedAt23
+    ? `Team ${coin.team} Coin #${coin.num} (Stopped at Step 23 Gate - Opponent kill required to enter inside 5/5 ring)`
+    : `Team ${coin.team} Coin #${coin.num} ${isSelectable ? '- Click to Move' : ''}`;
+
   return `
-    <div class="coin-piece ${teamColorClass} ${selectableClass}" 
+    <div class="coin-piece ${teamColorClass} ${selectableClass} ${isStoppedAt23 ? 'coin-stopped-23' : ''}" 
          data-coin-id="${coin.id}" 
          data-team="${coin.team}"
          ${offsetStyle}
-         title="Team ${coin.team} Coin #${coin.num} ${isSelectable ? '- Click to Move' : ''}">
+         title="${pieceTitle}">
       <span class="coin-num">${coin.num}</span>
+      ${isStoppedAt23 ? `<span class="coin-gate-badge">23</span>` : ""}
       ${isSelectable ? `<span class="coin-pulse-ring"></span>` : ""}
     </div>
   `;

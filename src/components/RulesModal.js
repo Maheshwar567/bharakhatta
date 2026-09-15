@@ -117,20 +117,28 @@ export function renderRulesModal(isOpen) {
 
           <section class="rules-section">
             <h3>⚔️ Capturing ("Kill" / Katta Strike)</h3>
+          <section class="rules-section">
+            <h3>⏱️ Strict 30-Second Turn Timeout</h3>
             <ul>
-              <li>Pawns travel counter-clockwise around the outer 24 squares.</li>
-              <li><strong>The Classic Katta Example:</strong> Team 1 advances a coin 15 steps from Bottom Home (reaching the NW corner). If Team 2 rolls a 3 from Top Home, they also land on the NW corner (their 3rd step) and <strong>KILL</strong> Team 1's coin!</li>
-              <li>The killed coin is sent directly back to its team's <strong>Jail</strong>.</li>
-              <li>Capturing an opponent's coin awards you an <strong>EXTRA BONUS ROLL</strong>!</li>
-              <li>Capturing at least one opponent coin unlocks your team's path into the <strong>Inner Track</strong> toward the Center.</li>
+              <li>Each player has exactly <strong>30 seconds</strong> to roll or choose a move.</li>
+              <li><strong>Timeout Forfeiture:</strong> If the 30-second timer expires, you receive <strong>NO roll chance</strong>. Your turn is immediately forfeited and passed to the next player!</li>
+            </ul>
+          </section>
+
+          <section class="rules-section">
+            <h3>🌀 Concentric Spiral Movement & Step 23 Gate</h3>
+            <ul>
+              <li><strong>Outer Track (24 Squares):</strong> Coins travel around the outer edge from Step 0 to Step 23.</li>
+              <li><strong>Step 23 Stop Rule:</strong> Once a coin reaches <strong>Step 23</strong>, it can <strong>ONLY enter the inside 5/5 ring</strong> if your team has killed at least one opponent coin!</li>
+              <li><strong>Without a Kill:</strong> Coins are <strong>stopped at Step 23 only</strong> and blocked from advancing until your team makes an opponent kill.</li>
+              <li><strong>With a Kill:</strong> Coins unlock from Step 23 and advance into the <strong>Inside 5/5 Ring (16 squares)</strong>, then into the <strong>Inside 3/3 Ring (8 squares)</strong>, and finally into the <strong>Center Sanctum (Final Home)</strong>.</li>
             </ul>
           </section>
 
           <section class="rules-section">
             <h3>🏆 Winning the Game</h3>
             <p>
-              After completing the outer loop and securing at least one kill, your coins advance into the central track. 
-              The first team to navigate all <strong>6 coins into the Center Home Sanctum</strong> wins the match!
+              Whoever completes all <strong>6 coins into the Final Home (Center Sanctum)</strong> wins the match!
             </p>
           </section>
         </div>

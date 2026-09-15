@@ -27,6 +27,7 @@ export class MultiplayerClient {
     this.onSyncRestart = options.onSyncRestart || (() => {});
     this.onChatReceived = options.onChatReceived || (() => {});
     this.onBetSynced = options.onBetSynced || (() => {});
+    this.onSyncTimeoutPass = options.onSyncTimeoutPass || (() => {});
     this.onError = options.onError || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
     this.currentBet = 250;
@@ -128,6 +129,10 @@ export class MultiplayerClient {
       case "ROOM_BET":
         this.currentBet = msg.bet;
         this.onBetSynced(msg.bet);
+        break;
+
+      case "ACTION_TIMEOUT_PASS":
+        this.onSyncTimeoutPass(msg);
         break;
 
       case "ERROR":
@@ -321,6 +326,15 @@ export class MultiplayerClient {
       type: "ROOM_BET",
       roomCode: this.roomCode,
       bet
+    });
+  }
+
+  sendTimeoutPass(playerId) {
+    if (!this.roomCode) return;
+    this.send({
+      type: "ACTION_TIMEOUT_PASS",
+      roomCode: this.roomCode,
+      playerId
     });
   }
 
