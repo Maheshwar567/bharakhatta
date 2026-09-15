@@ -73,43 +73,60 @@ export const HOME_COLUMN_TEAM2 = [
   { r: 3, c: 3, step: 26, isCenter: true, safe: true }
 ];
 
-// Full Spiral Path for Traditional Mode:
-// Outer ring (24) -> 5x5 ring (16) -> 3x3 ring (8) -> Center (3,3)
-const RING_5X5_TEAM1 = [
-  { r: 5, c: 2 }, { r: 5, c: 1, safe: true }, { r: 4, c: 1 }, { r: 3, c: 1 }, { r: 2, c: 1 },
-  { r: 1, c: 1, safe: true }, { r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 }, { r: 1, c: 5, safe: true },
-  { r: 2, c: 5 }, { r: 3, c: 5 }, { r: 4, c: 5 }, { r: 5, c: 5, safe: true }, { r: 5, c: 4 }, { r: 5, c: 3 }
-];
+// Exact 40-Step Numbered Spiral Path matching user hand-drawn diagram
+// Outer track: Steps 0 to 23 (24 squares)
+// Inner track: Steps 24 to 40 (17 squares ending at Center Sanctum (3,3))
 
-const RING_3X3_TEAM1 = [
-  { r: 4, c: 3 }, { r: 4, c: 2 }, { r: 3, c: 2 }, { r: 2, c: 2 },
-  { r: 2, c: 3 }, { r: 2, c: 4 }, { r: 3, c: 4 }, { r: 4, c: 4 }
+// Team 1 Inner Path (symmetrical 180° rotation of user's numbered diagram)
+const INNER_PATH_TEAM1 = [
+  { r: 5, c: 1, step: 24 }, // 24
+  { r: 4, c: 1, step: 25 }, // 25
+  { r: 3, c: 1, step: 26 }, // 26
+  { r: 2, c: 1, step: 27 }, // 27
+  { r: 1, c: 1, step: 28, safe: true }, // 28 (NW Katta)
+  { r: 1, c: 2, step: 29 }, // 29
+  { r: 1, c: 3, step: 30 }, // 30
+  { r: 1, c: 4, step: 31 }, // 31
+  { r: 2, c: 4, step: 32 }, // 32
+  { r: 3, c: 4, step: 33 }, // 33
+  { r: 4, c: 4, step: 34 }, // 34
+  { r: 4, c: 3, step: 35 }, // 35
+  { r: 4, c: 2, step: 36 }, // 36
+  { r: 3, c: 2, step: 37 }, // 37
+  { r: 2, c: 2, step: 38 }, // 38
+  { r: 2, c: 3, step: 39 }, // 39
+  { r: 3, c: 3, step: 40, isCenter: true, safe: true } // 40 (Final Home)
 ];
 
 export const SPIRAL_PATH_TEAM1 = [
   ...OUTER_PATH_TEAM1,
-  ...RING_5X5_TEAM1,
-  ...RING_3X3_TEAM1,
-  { r: 3, c: 3, isCenter: true, safe: true }
+  ...INNER_PATH_TEAM1
 ].map((pt, idx) => ({ ...pt, step: idx }));
 
-// Full Spiral for Team 2:
-const RING_5X5_TEAM2 = [
-  { r: 1, c: 4 }, { r: 1, c: 5, safe: true }, { r: 2, c: 5 }, { r: 3, c: 5 }, { r: 4, c: 5 },
-  { r: 5, c: 5, safe: true }, { r: 5, c: 4 }, { r: 5, c: 3 }, { r: 5, c: 2 }, { r: 5, c: 1, safe: true },
-  { r: 4, c: 1 }, { r: 3, c: 1 }, { r: 2, c: 1 }, { r: 1, c: 1, safe: true }, { r: 1, c: 2 }, { r: 1, c: 3 }
-];
-
-const RING_3X3_TEAM2 = [
-  { r: 2, c: 3 }, { r: 2, c: 4 }, { r: 3, c: 4 }, { r: 4, c: 4 },
-  { r: 4, c: 3 }, { r: 4, c: 2 }, { r: 3, c: 2 }, { r: 2, c: 2 }
+// Team 2 Inner Path (Exact 1-to-40 steps drawn from H2 in user's photo)
+const INNER_PATH_TEAM2 = [
+  { r: 1, c: 5, step: 24 }, // 24
+  { r: 2, c: 5, step: 25 }, // 25
+  { r: 3, c: 5, step: 26 }, // 26
+  { r: 4, c: 5, step: 27 }, // 27
+  { r: 5, c: 5, step: 28, safe: true }, // 28 (SE Katta)
+  { r: 5, c: 4, step: 29 }, // 29
+  { r: 5, c: 3, step: 30 }, // 30
+  { r: 5, c: 2, step: 31 }, // 31
+  { r: 4, c: 2, step: 32 }, // 32
+  { r: 3, c: 2, step: 33 }, // 33
+  { r: 2, c: 2, step: 34 }, // 34
+  { r: 2, c: 3, step: 35 }, // 35
+  { r: 2, c: 4, step: 36 }, // 36
+  { r: 3, c: 4, step: 37 }, // 37
+  { r: 4, c: 4, step: 38 }, // 38
+  { r: 4, c: 3, step: 39 }, // 39
+  { r: 3, c: 3, step: 40, isCenter: true, safe: true } // 40 (Final Home)
 ];
 
 export const SPIRAL_PATH_TEAM2 = [
   ...OUTER_PATH_TEAM2,
-  ...RING_5X5_TEAM2,
-  ...RING_3X3_TEAM2,
-  { r: 3, c: 3, isCenter: true, safe: true }
+  ...INNER_PATH_TEAM2
 ].map((pt, idx) => ({ ...pt, step: idx }));
 
 // Standard Classic Path (Ludo-style home column finish)

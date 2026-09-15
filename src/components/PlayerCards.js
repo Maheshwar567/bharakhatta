@@ -30,6 +30,19 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
           <span class="coin-bal">${walletCoins.toLocaleString()}</span>
         </div>
 
+        <!-- User Profile Badge -->
+        ${options.user ? `
+          <div class="user-header-pill" id="btn-open-profile" title="Player Profile & Match History (Click to view)">
+            <span class="user-icon">👤</span>
+            <span class="user-name-short">${options.user.name}</span>
+            <span class="user-mob-badge">📱..${options.user.mobile.slice(-4)}</span>
+          </div>
+        ` : `
+          <button class="btn-login-header" id="btn-header-login" title="Login with Mobile Number">
+            📱 Login
+          </button>
+        `}
+
         <!-- Match Pot Badge (if bet is active) -->
         ${matchPot > 0 ? `
           <div class="pot-header-badge" title="Total Match Pot">
@@ -84,8 +97,9 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
           📜
         </button>
 
-        <button id="btn-restart-game" class="btn-primary-sm" title="New Match">
-          🔄
+        <!-- Exit Match Button -->
+        <button id="btn-open-exit" class="btn-icon btn-exit-glow" title="Exit Match">
+          🚪 Exit
         </button>
       </div>
     </header>

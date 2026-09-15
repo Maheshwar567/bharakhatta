@@ -68,15 +68,21 @@ export function renderBoard(gameState, mpState = null) {
       // Cell interior content: 'X' marking for safe squares or center emblem
       let markerHtml = "";
       if (isCenter) {
+        const hasFinishedCoins = (team1Finished.length + team2Finished.length) > 0;
         markerHtml = `
-          <div class="center-sanctum-emblem">
+          <div class="center-sanctum-emblem happy-home-emblem ${hasFinishedCoins ? 'has-happy-coins' : ''}">
             <svg viewBox="0 0 100 100" class="sanctum-svg">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="#a8321a" stroke-width="4" stroke-dasharray="6 3" />
-              <line x1="15" y1="15" x2="85" y2="85" stroke="#a8321a" stroke-width="4" />
-              <line x1="85" y1="15" x2="15" y2="85" stroke="#a8321a" stroke-width="4" />
-              <circle cx="50" cy="50" r="22" fill="#d9534f" opacity="0.25" />
-              <text x="50" y="55" font-size="14" font-weight="900" fill="#781e0e" text-anchor="middle">HOME</text>
+              <circle cx="50" cy="50" r="46" fill="rgba(241, 196, 15, 0.18)" stroke="#d4ac0d" stroke-width="3" stroke-dasharray="6 3" />
+              <circle cx="50" cy="50" r="34" fill="rgba(230, 126, 34, 0.22)" />
+              <line x1="16" y1="16" x2="84" y2="84" stroke="#c0392b" stroke-width="3" />
+              <line x1="84" y1="16" x2="16" y2="84" stroke="#c0392b" stroke-width="3" />
+              <circle cx="50" cy="50" r="18" fill="#ffd700" opacity="0.45" />
             </svg>
+            <div class="happy-home-label">
+              <span class="happy-home-star">✨</span>
+              <span class="happy-home-text">HAPPY HOME</span>
+              <span class="happy-home-star">🎉</span>
+            </div>
             <div class="finished-coins-stack">
               ${renderFinishedCoins(team1Finished, team2Finished)}
             </div>
@@ -242,9 +248,9 @@ function renderFinishedCoins(t1Finished, t2Finished) {
   if (t1Finished.length === 0 && t2Finished.length === 0) return "";
 
   return `
-    <div class="finished-summary">
-      ${t1Finished.length > 0 ? `<span class="fin-badge t1-fin">👑 ${t1Finished.length}</span>` : ""}
-      ${t2Finished.length > 0 ? `<span class="fin-badge t2-fin">🦚 ${t2Finished.length}</span>` : ""}
+    <div class="finished-summary happy-coins-summary">
+      ${t1Finished.length > 0 ? `<span class="fin-badge t1-fin" title="${t1Finished.length} Team 1 coins reached Happy Home!">👑 ${t1Finished.length} 🎉</span>` : ""}
+      ${t2Finished.length > 0 ? `<span class="fin-badge t2-fin" title="${t2Finished.length} Team 2 coins reached Happy Home!">🦚 ${t2Finished.length} 🌟</span>` : ""}
     </div>
   `;
 }

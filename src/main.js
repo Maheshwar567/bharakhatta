@@ -14,6 +14,10 @@ import { renderChatDrawer, renderFloatingChatToast, QUICK_TAUNTS } from "./compo
 import { renderBetModal } from "./components/BetModal.js";
 import { MultiplayerClient } from "./game/multiplayerClient.js";
 import { wallet } from "./game/wallet.js";
+import { userManager } from "./game/userManager.js";
+import { renderLoginModal } from "./components/LoginModal.js";
+import { renderProfileHistoryModal } from "./components/ProfileHistoryModal.js";
+import { renderExitConfirmModal, renderInactivityModal } from "./components/ExitModal.js";
 import { TurnTimer } from "./game/turnTimer.js";
 import { sounds } from "./audio/soundManager.js";
 import { haptics } from "./utils/haptics.js";
@@ -26,6 +30,13 @@ class BharakhattaApp {
     this.mpModalOpen = false;
     this.chatOpen = false;
     this.betModalOpen = false;
+    this.loginModalOpen = !userManager.isLoggedIn();
+    this.profileModalOpen = false;
+    this.exitModalOpen = false;
+    this.inactivityModalOpen = false;
+    this.awayDurationSec = 0;
+    this.backgroundTimestamp = null;
+    this.loginError = null;
     this.soundMuted = false;
     this.qrDataUrl = null;
     this.roomQrDataUrl = null;
@@ -101,6 +112,7 @@ class BharakhattaApp {
 
     this.bindGlobalKeys();
     this.initMobileAudioUnlock();
+    this.initBackgroundDetection();
     this.checkUrlRoomParam();
     this.turnTimer.start();
     this.render();
@@ -208,6 +220,61 @@ class BharakhattaApp {
       this.turnTimer.reset();
       this.engine.advanceTurn();
     }
+  }
+
+  initBackgroundDetection() {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        this.backgroundTimestamp = Date.now();
+      } else if (document.visibilityState === "visible") {
+        if (this.backgroundTimestamp) {
+          const elapsed = Math.floor((Date.now() - this.backgroundTimestamp) / 1000);
+          this.backgroundTimestamp = null;
+          // If away for more than 2 minutes (120 seconds) during active game:
+          if (elapsed >= 120 && this.engine && this.engine.status !== GAME_STATUS.GAME_OVER && !this.loginModalOpen) {
+            this.handleInactivityForfeit(elapsed);
+          }
+        }
+      }
+    });
+  }
+
+  handleInactivityForfeit(awaySec) {
+    this.awayDurationSec = awaySec;
+    this.turnTimer.stop();
+
+    if (this.mpState.roomCode) {
+      // In multiplayer: forfeit match and award pot to remote opponent
+      this.engine.log(`⏰ Match forfeited: You were away in other apps for >2 minutes (${Math.floor(awaySec / 60)}m ${awaySec % 60}s).`);
+      this.mpClient.sendTimeoutPass(this.mpState.myPlayerId);
+
+      const myTeam = this.mpState.myTeam || 1;
+      const oppTeam = myTeam === 1 ? 2 : 1;
+      this.engine.winner = {
+        team: oppTeam,
+        player: this.engine.players.find(p => p.team === oppTeam) || { name: "Opponent", team: oppTeam }
+      };
+      this.engine.status = GAME_STATUS.GAME_OVER;
+
+      // Record forfeit in user history
+      userManager.recordMatch({
+        matchId: `m_${Date.now()}`,
+        opponent: myTeam === 1 ? this.mpClient.guestName : this.mpClient.hostName,
+        mode: `Online Room #${this.mpState.roomCode}`,
+        bet: this.currentBet,
+        pot: this.matchPot,
+        result: "FORFEITED",
+        coinsChange: -this.currentBet,
+        durationSec: Math.round((Date.now() - this.engine.stats.startTime) / 1000),
+        kills: myTeam === 1 ? this.engine.team1Kills : this.engine.team2Kills
+      });
+    } else {
+      // Solo play
+      this.engine.log(`⏸️ You were away in other apps for >2 minutes (${Math.floor(awaySec / 60)}m ${awaySec % 60}s).`);
+    }
+
+    this.inactivityModalOpen = true;
+    this.render();
   }
 
   renderTimerOnly(secs) {
@@ -396,6 +463,7 @@ class BharakhattaApp {
     const modalEl = document.getElementById("modal-container");
 
     const headerOptions = {
+      user: userManager.getCurrentUser(),
       walletCoins: wallet.getBalance(),
       matchPot: this.matchPot,
       timeLeft: this.turnTimer.getTimeLeft(),
@@ -408,6 +476,21 @@ class BharakhattaApp {
     if (tickerEl) tickerEl.innerHTML = renderToastFeed(this.logs);
 
     let modalsHtml = "";
+    if (this.loginModalOpen) {
+      modalsHtml += renderLoginModal(true, "", "", this.loginError);
+    }
+    if (this.profileModalOpen) {
+      const user = userManager.getCurrentUser();
+      const stats = userManager.getStats();
+      const history = userManager.getHistory();
+      modalsHtml += renderProfileHistoryModal(true, user, stats, history);
+    }
+    if (this.exitModalOpen) {
+      modalsHtml += renderExitConfirmModal(true);
+    }
+    if (this.inactivityModalOpen) {
+      modalsHtml += renderInactivityModal(true, this.awayDurationSec, !!this.mpState.roomCode);
+    }
     if (this.rulesOpen) {
       modalsHtml += renderRulesModal(true);
     }
@@ -432,10 +515,23 @@ class BharakhattaApp {
         this.winnerAwarded = true;
         this.turnTimer.stop();
         const myTeam = this.mpState.roomCode ? this.mpState.myTeam : 1;
-        if (state.winner.team === myTeam) {
+        const won = state.winner.team === myTeam;
+        if (won) {
           wallet.awardPot(this.matchPot);
           this.engine.log(`🏆 MATCH WON! You received the full pot: 🪙${this.matchPot.toLocaleString()} coins!`);
         }
+        // Record match in user history
+        userManager.recordMatch({
+          matchId: `m_${Date.now()}`,
+          opponent: this.mpState.roomCode ? (myTeam === 1 ? this.mpClient.guestName : this.mpClient.hostName) : "System AI",
+          mode: this.mpState.roomCode ? `Online Room #${this.mpState.roomCode}` : "Solo vs AI",
+          bet: this.currentBet,
+          pot: this.matchPot,
+          result: won ? "WON" : "LOST",
+          coinsChange: won ? this.matchPot - this.currentBet : -this.currentBet,
+          durationSec: Math.round((Date.now() - this.engine.stats.startTime) / 1000),
+          kills: myTeam === 1 ? state.team1Kills : state.team2Kills
+        });
       }
       haptics.victory();
       modalsHtml += renderVictoryModal(state.winner);
@@ -743,6 +839,116 @@ class BharakhattaApp {
         if (this.mpState.roomCode) {
           this.mpClient.sendRestart();
         }
+      };
+    }
+
+    // Login Modal Open from Header
+    const btnHeaderLogin = document.getElementById("btn-header-login");
+    if (btnHeaderLogin) {
+      btnHeaderLogin.onclick = () => {
+        this.loginModalOpen = true;
+        this.loginError = null;
+        this.render();
+      };
+    }
+
+    // Login Submission
+    const btnSubmitLogin = document.getElementById("btn-submit-login");
+    const inputLoginMobile = document.getElementById("input-login-mobile");
+    const inputLoginName = document.getElementById("input-login-name");
+
+    const doLogin = () => {
+      if (!inputLoginMobile) return;
+      const mob = inputLoginMobile.value;
+      const name = inputLoginName ? inputLoginName.value : "";
+      const res = userManager.login(mob, name);
+      if (res.success) {
+        this.loginModalOpen = false;
+        this.loginError = null;
+        if (this.engine.players && this.engine.players[0]) {
+          this.engine.players[0].name = res.user.name;
+        }
+        this.engine.log(`👤 Logged in as ${res.user.name} (+91 ${res.user.mobile}). ${res.isNewUser ? "🪙1,000 joining bonus credited!" : "Profile & history restored."}`);
+        this.render();
+      } else {
+        this.loginError = res.error;
+        this.render();
+      }
+    };
+
+    if (btnSubmitLogin) btnSubmitLogin.onclick = doLogin;
+    if (inputLoginMobile) {
+      inputLoginMobile.onkeydown = (e) => {
+        if (e.key === "Enter") doLogin();
+      };
+    }
+
+    // Profile Modal Open / Close / Switch Account
+    const btnOpenProfile = document.getElementById("btn-open-profile");
+    const btnCloseProfile = document.getElementById("btn-close-profile");
+    const btnProfileDone = document.getElementById("btn-profile-done");
+    const btnSwitchAccount = document.getElementById("btn-switch-account");
+
+    if (btnOpenProfile) btnOpenProfile.onclick = () => { this.profileModalOpen = true; this.render(); };
+    if (btnCloseProfile) btnCloseProfile.onclick = () => { this.profileModalOpen = false; this.render(); };
+    if (btnProfileDone) btnProfileDone.onclick = () => { this.profileModalOpen = false; this.render(); };
+    if (btnSwitchAccount) {
+      btnSwitchAccount.onclick = () => {
+        userManager.logout();
+        this.profileModalOpen = false;
+        this.loginModalOpen = true;
+        this.loginError = null;
+        this.render();
+      };
+    }
+
+    // Exit Game Modal Open / Cancel / Confirm
+    const btnOpenExit = document.getElementById("btn-open-exit");
+    const btnCloseExit = document.getElementById("btn-close-exit");
+    const btnCancelExit = document.getElementById("btn-cancel-exit");
+    const btnConfirmExit = document.getElementById("btn-confirm-exit");
+
+    if (btnOpenExit) btnOpenExit.onclick = () => { this.exitModalOpen = true; this.render(); };
+    if (btnCloseExit) btnCloseExit.onclick = () => { this.exitModalOpen = false; this.render(); };
+    if (btnCancelExit) btnCancelExit.onclick = () => { this.exitModalOpen = false; this.render(); };
+    if (btnConfirmExit) {
+      btnConfirmExit.onclick = () => {
+        const myTeam = this.mpState.roomCode ? this.mpState.myTeam : 1;
+        userManager.recordMatch({
+          matchId: `m_${Date.now()}`,
+          opponent: this.mpState.roomCode ? (myTeam === 1 ? this.mpClient.guestName : this.mpClient.hostName) : "System AI",
+          mode: this.mpState.roomCode ? `Online Room #${this.mpState.roomCode}` : "Solo vs AI",
+          bet: this.currentBet,
+          pot: this.matchPot,
+          result: "FORFEITED",
+          coinsChange: -this.currentBet,
+          durationSec: Math.round((Date.now() - this.engine.stats.startTime) / 1000),
+          kills: myTeam === 1 ? this.engine.team1Kills : this.engine.team2Kills
+        });
+
+        if (this.mpState.roomCode) {
+          this.mpClient.sendTimeoutPass(this.mpState.myPlayerId);
+          this.mpClient.leaveRoom();
+        }
+
+        this.exitModalOpen = false;
+        this.engine.initGame();
+        this.winnerAwarded = false;
+        this.turnTimer.start();
+        this.engine.log("🚪 You exited the match.");
+        this.render();
+      };
+    }
+
+    // Inactivity Dismissal
+    const btnInactivityDismiss = document.getElementById("btn-inactivity-dismiss");
+    if (btnInactivityDismiss) {
+      btnInactivityDismiss.onclick = () => {
+        this.inactivityModalOpen = false;
+        this.engine.initGame();
+        this.winnerAwarded = false;
+        this.turnTimer.start();
+        this.render();
       };
     }
   }

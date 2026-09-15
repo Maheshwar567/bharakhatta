@@ -1662,3 +1662,426 @@ body {
   border-color: #f39c12 !important;
   animation: pulse-turn 1s infinite alternate;
 }
+
+/* =================================================================
+   HAPPY FINAL HOME & CELEBRATION
+   ================================================================= */
+.happy-home-emblem {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-glow-subtle 2s infinite alternate;
+}
+
+.has-happy-coins {
+  animation: pulse-happy 1.2s infinite alternate;
+}
+
+@keyframes pulse-happy {
+  from { filter: drop-shadow(0 0 3px #f1c40f); transform: scale(1); }
+  to { filter: drop-shadow(0 0 10px #f39c12); transform: scale(1.05); }
+}
+
+@keyframes pulse-glow-subtle {
+  from { filter: drop-shadow(0 0 2px rgba(241, 196, 15, 0.4)); }
+  to { filter: drop-shadow(0 0 7px rgba(243, 156, 18, 0.8)); }
+}
+
+.happy-home-label {
+  position: absolute;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(46, 204, 113, 0.9);
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 0.5px solid #27ae60;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  z-index: 15;
+}
+
+.happy-home-text {
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.happy-home-star {
+  font-size: 7px;
+  animation: bounce-star 0.7s infinite alternate;
+}
+
+.happy-coins-summary {
+  display: flex;
+  gap: 3px;
+  margin-top: 1px;
+}
+
+.happy-coins-summary .fin-badge {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  animation: bounce-star 0.9s infinite alternate;
+}
+
+/* =================================================================
+   USER PROFILE & LOGIN HEADER BADGE
+   ================================================================= */
+.user-header-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #1b2838, #2c3e50);
+  border: 1px solid #3498db;
+  border-radius: 20px;
+  padding: 2px 7px;
+  font-size: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: all 0.15s ease;
+}
+
+.user-header-pill:active {
+  transform: scale(0.96);
+}
+
+.user-icon {
+  font-size: 11px;
+}
+
+.user-name-short {
+  font-weight: 800;
+  color: #ecf0f1;
+  max-width: 60px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-mob-badge {
+  font-size: 8px;
+  color: #74b9ff;
+  font-weight: 700;
+}
+
+.btn-login-header {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: #fff;
+  border: 1px solid #2ecc71;
+  border-radius: 16px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(46, 204, 113, 0.4);
+}
+
+.btn-exit-glow {
+  background: rgba(192, 57, 43, 0.25) !important;
+  border-color: #e74c3c !important;
+  color: #ff7675 !important;
+}
+
+.btn-exit-glow:active {
+  background: #c0392b !important;
+  color: #fff !important;
+}
+
+/* =================================================================
+   MODALS: LOGIN, PROFILE HISTORY, EXIT, INACTIVITY
+   ================================================================= */
+.modal-login {
+  max-width: 380px;
+}
+
+.login-banner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.login-perk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #25130b;
+  border: 1px solid #5a351e;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.perk-icon {
+  font-size: 18px;
+}
+
+.login-perk strong {
+  font-size: 10.5px;
+  color: #ffdf9e;
+  display: block;
+}
+
+.login-perk p {
+  font-size: 8.5px;
+  color: #a88469;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.login-error-box {
+  background: rgba(231, 76, 60, 0.25);
+  border: 1px solid #e74c3c;
+  color: #ff7675;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.mobile-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #23120b;
+  border: 1.5px solid #5a351e;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.country-prefix {
+  padding: 8px 10px;
+  background: #331a0e;
+  font-size: 12px;
+  font-weight: 800;
+  color: #f1c40f;
+  border-right: 1px solid #5a351e;
+}
+
+.mobile-input {
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 10px !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1px !important;
+  color: #fff !important;
+  width: 100%;
+}
+
+.label-badge {
+  font-size: 8px;
+  font-weight: 800;
+  color: #e67e22;
+  background: rgba(230, 126, 34, 0.2);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+.label-badge.optional {
+  color: #95a5a6;
+  background: rgba(149, 165, 166, 0.2);
+}
+
+.input-hint {
+  font-size: 9px;
+  color: #a88469;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Profile Modal & Lifetime History */
+.modal-profile {
+  max-width: 480px;
+}
+
+.stats-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.stat-card {
+  background: #25130b;
+  border: 1px solid #5a351e;
+  border-radius: 8px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 13px;
+  font-weight: 900;
+  color: #f1c40f;
+  display: block;
+}
+
+.stat-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: #a88469;
+  text-transform: uppercase;
+  margin-top: 2px;
+  display: block;
+}
+
+.history-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.history-section-header h3 {
+  font-size: 12px;
+  font-weight: 900;
+  color: #ffdf9e;
+  margin: 0;
+}
+
+.history-hint {
+  font-size: 9px;
+  color: #74b9ff;
+}
+
+.history-table-wrapper {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #4a2816;
+  border-radius: 6px;
+  background: #1c0d06;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+}
+
+.history-table th {
+  background: #2a140b;
+  padding: 6px 8px;
+  color: #ffdf9e;
+  font-weight: 800;
+  text-align: left;
+  border-bottom: 1px solid #4a2816;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.history-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #33180d;
+  color: #ddd;
+}
+
+.history-date {
+  font-weight: 800;
+  color: #eee;
+}
+
+.history-time {
+  font-size: 7.5px;
+  color: #888;
+}
+
+.history-mode {
+  font-weight: 700;
+  color: #ffdf9e;
+}
+
+.history-opp {
+  font-size: 8px;
+  color: #aaa;
+}
+
+.history-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.result-won {
+  background: rgba(39, 174, 96, 0.25);
+  color: #2ecc71;
+  border: 0.5px solid #27ae60;
+}
+
+.result-lost {
+  background: rgba(192, 57, 43, 0.25);
+  color: #e74c3c;
+  border: 0.5px solid #c0392b;
+}
+
+.history-delta {
+  font-weight: 900;
+}
+
+.delta-positive {
+  color: #2ecc71;
+}
+
+.delta-negative {
+  color: #e74c3c;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 16px 8px;
+  color: #888;
+  font-style: italic;
+}
+
+.modal-footer-split {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal-confirm {
+  max-width: 360px;
+}
+
+.confirm-text {
+  font-size: 11px;
+  color: #eee;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: #fff;
+  border: 1px solid #ff7675;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modal-alert {
+  max-width: 360px;
+}
+
+.alert-box-warning {
+  background: rgba(243, 156, 18, 0.2);
+  border: 1px solid #f39c12;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #f1c40f;
+  font-size: 11px;
+  line-height: 1.4;
+}
+

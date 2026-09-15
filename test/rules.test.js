@@ -1,8 +1,19 @@
-// Comprehensive test suite for Bharakhatta rules, paths, scoring, and captures
+// Mock localStorage for Node.js test environment
+if (typeof globalThis.localStorage === "undefined") {
+  const store = {};
+  globalThis.localStorage = {
+    getItem: (k) => store[k] ?? null,
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]); }
+  };
+}
 
 import { BharakhattaEngine, GAME_STATUS } from "../src/game/engine.js";
 import { CowrieDice } from "../src/game/cowries.js";
 import { getPlayerPath, isSafeSquare } from "../src/game/board.js";
+import { UserManager } from "../src/game/userManager.js";
+import { wallet } from "../src/game/wallet.js";
 
 function runTests() {
   console.log("=== BHARAKHATTA AUTOMATED TEST SUITE ===\n");
@@ -114,24 +125,24 @@ function runTests() {
   assert(isSafeSquare(3, 3), "Center Sanctum (3, 3) is a safe square");
   assert(!isSafeSquare(0, 0), "NW Corner (0, 0) is NOT a safe square (vulnerable to kill!)");
 
-  // 6. Test Authentic Spiral Path (49 Steps)
-  console.log("\n--- Test 6: Spiral Path & 5/5 Inside Ring Alignment ---");
+  // 6. Test Authentic Spiral Path (40 Steps matching User's Hand-drawn Diagram)
+  console.log("\n--- Test 6: Spiral Path & 5/5 Inside Ring Alignment (40 Steps) ---");
   const spiralT1 = getPlayerPath(1, "spiral");
   const spiralT2 = getPlayerPath(2, "spiral");
-  assert(spiralT1.length === 49, `Team 1 Spiral Path has exactly 49 steps (was ${spiralT1.length})`);
-  assert(spiralT2.length === 49, `Team 2 Spiral Path has exactly 49 steps (was ${spiralT2.length})`);
+  assert(spiralT1.length === 41, `Team 1 Spiral Path has exactly 41 points (indices 0..40, was ${spiralT1.length})`);
+  assert(spiralT2.length === 41, `Team 2 Spiral Path has exactly 41 points (indices 0..40, was ${spiralT2.length})`);
   
-  // Team 1: Step 0 is Bottom Home (6, 3), Step 23 is Gate (6, 2), Step 24 enters 5/5 (5, 2), Step 48 is Center (3, 3)
+  // Team 1: Step 0 is Bottom Home (6, 3), Step 23 is Gate (6, 2), Step 24 enters 5/5 (5, 1), Step 40 is Center (3, 3)
   assert(spiralT1[0].r === 6 && spiralT1[0].c === 3, "Team 1 Step 0 is Home 1 (6, 3)");
   assert(spiralT1[23].r === 6 && spiralT1[23].c === 2, "Team 1 Step 23 is Gate 23 (6, 2)");
-  assert(spiralT1[24].r === 5 && spiralT1[24].c === 2, "Team 1 Step 24 enters inside 5/5 ring (5, 2)");
-  assert(spiralT1[48].r === 3 && spiralT1[48].c === 3, "Team 1 Step 48 is Center Sanctum (3, 3)");
+  assert(spiralT1[24].r === 5 && spiralT1[24].c === 1, "Team 1 Step 24 enters inside 5/5 ring (5, 1)");
+  assert(spiralT1[40].r === 3 && spiralT1[40].c === 3, "Team 1 Step 40 is Center Sanctum (3, 3)");
 
-  // Team 2: Step 0 is Top Home (0, 3), Step 23 is Gate (0, 4), Step 24 enters 5/5 (1, 4), Step 48 is Center (3, 3)
+  // Team 2: Step 0 is Top Home (0, 3), Step 23 is Gate (0, 4), Step 24 enters 5/5 (1, 5), Step 40 is Center (3, 3)
   assert(spiralT2[0].r === 0 && spiralT2[0].c === 3, "Team 2 Step 0 is Home 2 (0, 3)");
   assert(spiralT2[23].r === 0 && spiralT2[23].c === 4, "Team 2 Step 23 is Gate 23 (0, 4)");
-  assert(spiralT2[24].r === 1 && spiralT2[24].c === 4, "Team 2 Step 24 enters inside 5/5 ring (1, 4)");
-  assert(spiralT2[48].r === 3 && spiralT2[48].c === 3, "Team 2 Step 48 is Center Sanctum (3, 3)");
+  assert(spiralT2[24].r === 1 && spiralT2[24].c === 5, "Team 2 Step 24 enters inside 5/5 ring (1, 5)");
+  assert(spiralT2[40].r === 3 && spiralT2[40].c === 3, "Team 2 Step 40 is Center Sanctum (3, 3)");
 
   // 7. Test Step 23 Stopping Rule (Zero Kills)
   console.log("\n--- Test 7: Step 23 Stop Rule (Zero Kills) ---");
@@ -175,11 +186,52 @@ function runTests() {
     const c = engine2.coins.find(coin => coin.team === 1 && coin.num === i);
     c.inJail = false;
     c.isFinished = true;
-    c.stepIndex = 48;
+    c.stepIndex = 40;
     c.coord = { r: 3, c: 3 };
   }
   assert(engine2.checkWinCondition(1) === true, "Team 1 wins when all 6 coins reach Center Sanctum (Final Home)");
   assert(engine2.checkWinCondition(2) === false, "Team 2 has not won");
+
+  // 10. Test Mobile Number Login, Existing User Recognition, and Lifetime Stats
+  console.log("\n--- Test 10: Mobile Number Login & Persistence ---");
+  const um = new UserManager();
+
+  // Test invalid mobile input
+  const invalidLogin = um.login("12345");
+  assert(invalidLogin.success === false, "Fails login on invalid phone number length");
+
+  // Test new user registration
+  const user1Mobile = "9876543210";
+  const login1 = um.login(user1Mobile, "Ravi Kumar");
+  assert(login1.success === true && login1.isNewUser === true, "First time login succeeds and creates new user");
+  assert(wallet.getBalance() === 1000, "New user receives 1,000 joining bonus");
+
+  // Win some coins
+  wallet.awardPot(500);
+  assert(wallet.getBalance() === 1500, "Wallet balance increased after win to 1500");
+  um.saveUserProfile(um.currentUser);
+
+  // Record a match in history
+  um.recordMatch({
+    result: "WON",
+    mode: "vs Computer",
+    betAmount: 250,
+    potWon: 500,
+    kills: 3,
+    finishedCoins: 6
+  });
+
+  const history = um.getHistory(user1Mobile);
+  assert(history.length === 1 && history[0].result === "WON", "Match history successfully recorded");
+  const stats = um.getStats();
+  assert(stats.gamesWon === 1 && stats.gamesPlayed === 1 && stats.totalKills === 3, "Lifetime stats correctly aggregated");
+
+  // Simulate logging out / logging back in with SAME mobile number
+  um.currentUser = null;
+  const loginAgain = um.login(user1Mobile, "Ravi Kumar");
+  assert(loginAgain.success === true && loginAgain.isNewUser === false, "Recognized as existing user on 2nd login with same number");
+  assert(wallet.getBalance() === 1500, "Existing user restores previous wallet balance (1500)");
+  assert(um.getHistory(user1Mobile).length === 1, "Existing user maintains complete match history");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);
