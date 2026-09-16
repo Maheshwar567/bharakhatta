@@ -53,16 +53,20 @@ export function renderBoard(gameState, mpState = null) {
         ? validMoves.find(m => m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c)
         : null;
 
-      const isT1Gate = (r === 6 && c === 2);
-      const isT2Gate = (r === 0 && c === 4);
+      const isH1Gate = (r === 4 && c === 6);
+      const isH2Gate = (r === 0 && c === 4);
+      const isH3Gate = (r === 2 && c === 0);
+      const isH4Gate = (r === 6 && c === 2);
+      const isAnyGate = isH1Gate || isH2Gate || isH3Gate || isH4Gate;
 
       let cellClasses = ["board-cell"];
       if (isSafe) cellClasses.push("cell-safe-katta");
       if (isCenter) cellClasses.push("cell-center-sanctum");
-      if (r === 0 && c === 3) cellClasses.push("cell-home-team2");
-      if (r === 6 && c === 3) cellClasses.push("cell-home-team1");
-      if (isT1Gate) cellClasses.push("cell-gate-step23", "gate-t1");
-      if (isT2Gate) cellClasses.push("cell-gate-step23", "gate-t2");
+      if (r === 3 && c === 6) cellClasses.push("cell-home-h1");
+      if (r === 0 && c === 3) cellClasses.push("cell-home-h2");
+      if (r === 3 && c === 0) cellClasses.push("cell-home-h3");
+      if (r === 6 && c === 3) cellClasses.push("cell-home-h4");
+      if (isAnyGate) cellClasses.push("cell-gate-step23");
       if (matchingMove) cellClasses.push("cell-valid-target");
 
       // Cell interior content: 'X' marking for safe squares or center emblem
@@ -72,11 +76,11 @@ export function renderBoard(gameState, mpState = null) {
         markerHtml = `
           <div class="center-sanctum-emblem happy-home-emblem ${hasFinishedCoins ? 'has-happy-coins' : ''}">
             <svg viewBox="0 0 100 100" class="sanctum-svg">
-              <circle cx="50" cy="50" r="46" fill="rgba(241, 196, 15, 0.18)" stroke="#d4ac0d" stroke-width="3" stroke-dasharray="6 3" />
-              <circle cx="50" cy="50" r="34" fill="rgba(230, 126, 34, 0.22)" />
+              <circle cx="50" cy="50" r="46" fill="rgba(241, 196, 15, 0.22)" stroke="#d4ac0d" stroke-width="3" stroke-dasharray="6 3" />
+              <circle cx="50" cy="50" r="34" fill="rgba(230, 126, 34, 0.25)" />
               <line x1="16" y1="16" x2="84" y2="84" stroke="#c0392b" stroke-width="3" />
               <line x1="84" y1="16" x2="16" y2="84" stroke="#c0392b" stroke-width="3" />
-              <circle cx="50" cy="50" r="18" fill="#ffd700" opacity="0.45" />
+              <circle cx="50" cy="50" r="18" fill="#ffd700" opacity="0.5" />
             </svg>
             <div class="happy-home-label">
               <span class="happy-home-star">✨</span>
@@ -89,25 +93,24 @@ export function renderBoard(gameState, mpState = null) {
           </div>
         `;
       } else if (isSafe) {
+        let homeLabel = "";
+        if (r === 3 && c === 6) homeLabel = "H1 (EAST)";
+        else if (r === 0 && c === 3) homeLabel = "H2 (NORTH)";
+        else if (r === 3 && c === 0) homeLabel = "H3 (WEST)";
+        else if (r === 6 && c === 3) homeLabel = "H4 (SOUTH)";
+
         markerHtml = `
           <div class="katta-x-mark">
             <svg viewBox="0 0 100 100" class="cross-svg">
               <line x1="10" y1="10" x2="90" y2="90" stroke="#8a2512" stroke-width="6" stroke-linecap="round" />
               <line x1="90" y1="10" x2="10" y2="90" stroke="#8a2512" stroke-width="6" stroke-linecap="round" />
             </svg>
-            ${(r === 0 && c === 3) ? '<span class="cell-tag">HOME 2</span>' : ""}
-            ${(r === 6 && c === 3) ? '<span class="cell-tag">HOME 1</span>' : ""}
+            ${homeLabel ? `<span class="cell-tag">${homeLabel}</span>` : ""}
           </div>
         `;
-      } else if (isT1Gate) {
+      } else if (isAnyGate) {
         markerHtml = `
-          <div class="gate-marker" title="Gate 23 (Team 1): Coins stop here unless you have killed an opponent!">
-            <span class="cell-gate-tag">GATE 23</span>
-          </div>
-        `;
-      } else if (isT2Gate) {
-        markerHtml = `
-          <div class="gate-marker" title="Gate 23 (Team 2): Coins stop here unless you have killed an opponent!">
+          <div class="gate-marker" title="Gate 23: Opponent kill needed to enter inside 5/5 ring!">
             <span class="cell-gate-tag">GATE 23</span>
           </div>
         `;

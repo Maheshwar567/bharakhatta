@@ -109,13 +109,19 @@ class BharakhattaApp {
       }
     });
 
+    // Auto-move timer (1-second pause after toss)
+    this.autoMoveTimer = null;
+
     this.initDOM();
 
     this.engine = new BharakhattaEngine({
       gameMode: "2p",
       diceMode: "cowries",
       onStateChange: () => {
-        if (this.engine) this.render();
+        if (this.engine) {
+          this.render();
+          this.checkAutoMove();
+        }
       },
       onLog: (entry) => this.addLog(entry),
       onTurnChange: (player) => this.handleTurnChange(player),
@@ -261,6 +267,10 @@ class BharakhattaApp {
   }
 
   handleTurnChange(player) {
+    if (this.autoMoveTimer) {
+      clearTimeout(this.autoMoveTimer);
+      this.autoMoveTimer = null;
+    }
     this.turnTimer.reset();
     const isMyTurn = this.mpState.roomCode
       ? player.id === this.mpState.myPlayerId
@@ -404,6 +414,11 @@ class BharakhattaApp {
     if (this.mpState.roomCode && state.currentPlayer.id !== this.mpState.myPlayerId) return;
     if (!this.mpState.roomCode && state.currentPlayer.isAI) return;
 
+    if (this.autoMoveTimer) {
+      clearTimeout(this.autoMoveTimer);
+      this.autoMoveTimer = null;
+    }
+
     haptics.rollTumble();
     this.turnTimer.reset();
     const roll = this.engine.roll();
@@ -411,11 +426,16 @@ class BharakhattaApp {
       this.mpClient.sendRoll(roll);
       setTimeout(() => {
         if (this.mpClient) this.mpClient.sendGameState(this.engine.getStateSnapshot());
-      }, 650);
+      }, 2100);
     }
   }
 
   attemptMove(move) {
+    if (this.autoMoveTimer) {
+      clearTimeout(this.autoMoveTimer);
+      this.autoMoveTimer = null;
+    }
+
     const state = this.engine.getStateSnapshot();
     if (state.status !== GAME_STATUS.WAITING_FOR_MOVE) return;
     if (this.mpState.roomCode && state.currentPlayer.id !== this.mpState.myPlayerId) return;
@@ -428,6 +448,46 @@ class BharakhattaApp {
       setTimeout(() => {
         if (this.mpClient) this.mpClient.sendGameState(this.engine.getStateSnapshot());
       }, 700);
+    }
+  }
+
+  checkAutoMove() {
+    const state = this.engine.getStateSnapshot();
+    if (state.status !== GAME_STATUS.WAITING_FOR_MOVE) {
+      if (this.autoMoveTimer) {
+        clearTimeout(this.autoMoveTimer);
+        this.autoMoveTimer = null;
+      }
+      return;
+    }
+
+    const isMyTurn = this.mpState.roomCode
+      ? state.currentPlayer.id === this.mpState.myPlayerId
+      : !state.currentPlayer.isAI;
+
+    if (!isMyTurn) {
+      if (this.autoMoveTimer) {
+        clearTimeout(this.autoMoveTimer);
+        this.autoMoveTimer = null;
+      }
+      return;
+    }
+
+    // If an auto-move is already queued, let it finish its 1-second countdown
+    if (this.autoMoveTimer) return;
+
+    const singleMove = this.engine.getSingleMovableMove();
+    if (singleMove) {
+      // Auto move after 1-second pause per user requirement:
+      // "after toss wait for a sec for every time"
+      // "if there is only one coin from out of jail - dont ask for the user to move do auto move upon toss becuase there is no coin other than one"
+      this.engine.log(`⚡ Single movable coin (#${singleMove.coin?.num || 1}) - auto-moving in 1s...`);
+      this.autoMoveTimer = setTimeout(() => {
+        this.autoMoveTimer = null;
+        if (this.engine && this.engine.status === GAME_STATUS.WAITING_FOR_MOVE) {
+          this.attemptMove(singleMove);
+        }
+      }, 1000);
     }
   }
 
@@ -512,6 +572,11 @@ class BharakhattaApp {
   }
 
   handleRemoteRoll(rollResult) {
+    if (this.autoMoveTimer) {
+      clearTimeout(this.autoMoveTimer);
+      this.autoMoveTimer = null;
+    }
+
     haptics.rollTumble();
     this.engine.status = GAME_STATUS.ROLLING;
     sounds.playCowrieRoll();
@@ -522,7 +587,7 @@ class BharakhattaApp {
     setTimeout(() => {
       this.engine.resolveRoll(rollResult);
       this.render();
-    }, 600);
+    }, 2000);
   }
 
   handleRemoteMove(move) {

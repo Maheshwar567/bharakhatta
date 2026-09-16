@@ -27,7 +27,7 @@ class SoundManager {
     return this.muted;
   }
 
-  // Play a sequence of random organic shell rattling clicks
+  // Play a sequence of random organic shell rattling clicks (2-second folded palm shake)
   playCowrieRoll() {
     if (this.muted) return;
     this.init();
@@ -35,10 +35,10 @@ class SoundManager {
     if (this.ctx.state === "suspended") this.ctx.resume();
 
     const now = this.ctx.currentTime;
-    const numClicks = 14 + Math.floor(Math.random() * 8);
+    const numClicks = 32 + Math.floor(Math.random() * 10);
 
     for (let i = 0; i < numClicks; i++) {
-      const timeOffset = (i / numClicks) * 0.45 + (Math.random() * 0.04 - 0.02);
+      const timeOffset = (i / numClicks) * 1.85 + (Math.random() * 0.04 - 0.02);
       const startTime = now + Math.max(0, timeOffset);
 
       const osc = this.ctx.createOscillator();
@@ -55,16 +55,20 @@ class SoundManager {
       filter.frequency.setValueAtTime(2800 + Math.random() * 1200, startTime);
       filter.Q.setValueAtTime(4.0, startTime);
 
-      const clickVol = (0.05 + (i / numClicks) * 0.12) * (0.8 + Math.random() * 0.4);
+      const isFinalToss = i >= numClicks - 4;
+      const clickVol = isFinalToss
+        ? 0.22 * (0.8 + Math.random() * 0.4)
+        : (0.05 + (i / numClicks) * 0.12) * (0.8 + Math.random() * 0.4);
+
       gain.gain.setValueAtTime(clickVol, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + (isFinalToss ? 0.06 : 0.04));
 
       osc.connect(filter);
       filter.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(startTime);
-      osc.stop(startTime + 0.045);
+      osc.stop(startTime + (isFinalToss ? 0.07 : 0.045));
     }
   }
 

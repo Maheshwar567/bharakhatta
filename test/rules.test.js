@@ -70,21 +70,34 @@ function runTests() {
   console.log("Distribution:", distribution);
   assert(distribution[1] > 0 && distribution[2] > 0 && distribution[3] > 0 && distribution[4] > 0 && distribution[5] > 0 && distribution[6] > 0 && distribution[12] > 0, "All possible scores (1-6 and 12) appear in natural rolls");
 
-  // 3. Test Paths and Step 15 Capture Logic (User's rule verification)
-  console.log("\n--- Test 3: Path and Step Alignment ---");
-  const pathT1 = getPlayerPath(1, "classic");
-  const pathT2 = getPlayerPath(2, "classic");
+  // 3. Test Paths and Step Alignment for All 4 Homes
+  console.log("\n--- Test 3: Path and Step Alignment for All 4 Homes ---");
+  const pathH1 = getPlayerPath(1);
+  const pathH2 = getPlayerPath(2);
+  const pathH3 = getPlayerPath(3);
+  const pathH4 = getPlayerPath(4);
 
-  // Team 1 start is (6, 3) Bottom Home
-  assert(pathT1[0].r === 6 && pathT1[0].c === 3, "Team 1 Step 0 is Bottom Home (6, 3)");
-  // Team 2 start is (0, 3) Top Home
-  assert(pathT2[0].r === 0 && pathT2[0].c === 3, "Team 2 Step 0 is Top Home (0, 3)");
-  // Team 1 Step 12 is Opponent Home (0, 3)
-  assert(pathT1[12].r === 0 && pathT1[12].c === 3, "Team 1 Step 12 is Top Home (0, 3)");
-  // Team 1 Step 15 is NW corner (0, 0)
-  assert(pathT1[15].r === 0 && pathT1[15].c === 0, "Team 1 Step 15 is NW Corner (0, 0)");
-  // Team 2 Step 3 is NW corner (0, 0)
-  assert(pathT2[3].r === 0 && pathT2[3].c === 0, "Team 2 Step 3 is NW Corner (0, 0) -> EXACT MATCH WITH USER EXAMPLE!");
+  // Home 1 Base: East (3, 6) per user drawing media_1789533923694.png
+  assert(pathH1[0].r === 3 && pathH1[0].c === 6, "Home 1 Step 0 is East Base (3, 6)");
+  assert(pathH1[23].r === 4 && pathH1[23].c === 6, "Home 1 Step 23 is Gate 23 (4, 6)");
+  assert(pathH1[24].r === 5 && pathH1[24].c === 5, "Home 1 Step 24 enters 5/5 squad at (5, 5)");
+  assert(pathH1[48].r === 3 && pathH1[48].c === 3, "Home 1 Step 48 is Center Sanctum (Happy Home, 3, 3)");
+
+  // Home 2 Base: North (0, 3) (90° CCW Rotation)
+  assert(pathH2[0].r === 0 && pathH2[0].c === 3, "Home 2 Step 0 is North Base (0, 3)");
+  assert(pathH2[23].r === 0 && pathH2[23].c === 4, "Home 2 Step 23 is Gate 23 (0, 4)");
+  assert(pathH2[24].r === 1 && pathH2[24].c === 5, "Home 2 Step 24 enters 5/5 squad at (1, 5)");
+  assert(pathH2[48].r === 3 && pathH2[48].c === 3, "Home 2 Step 48 is Center Sanctum (Happy Home, 3, 3)");
+
+  // Home 3 Base: West (3, 0) (180° Rotation)
+  assert(pathH3[0].r === 3 && pathH3[0].c === 0, "Home 3 Step 0 is West Base (3, 0)");
+  assert(pathH3[23].r === 2 && pathH3[23].c === 0, "Home 3 Step 23 is Gate 23 (2, 0)");
+  assert(pathH3[48].r === 3 && pathH3[48].c === 3, "Home 3 Step 48 is Center Sanctum (Happy Home, 3, 3)");
+
+  // Home 4 Base: South (6, 3) (270° CCW Rotation)
+  assert(pathH4[0].r === 6 && pathH4[0].c === 3, "Home 4 Step 0 is South Base (6, 3)");
+  assert(pathH4[23].r === 6 && pathH4[23].c === 2, "Home 4 Step 23 is Gate 23 (6, 2)");
+  assert(pathH4[48].r === 3 && pathH4[48].c === 3, "Home 4 Step 48 is Center Sanctum (Happy Home, 3, 3)");
 
   // 4. Test Jail Entry and Moves in Game Engine
   console.log("\n--- Test 4: Jail Release & Legal Moves Engine ---");
@@ -109,7 +122,7 @@ function runTests() {
   engine.executeMove(movesRoll1[0]);
 
   const activeT1 = engine.getTeamCoins(1).filter(c => !c.inJail);
-  assert(activeT1.length === 1 && activeT1[0].coord.r === 6 && activeT1[0].coord.c === 3, "Released coin is on Home base (6, 3)");
+  assert(activeT1.length === 1 && activeT1[0].coord.r === 3 && activeT1[0].coord.c === 6, "Released coin is on Home 1 East base (3, 6)");
 
   // Now test roll of 3 with 1 active coin
   const movesRoll3WithActive = engine.getLegalMoves(1, 3);
@@ -117,10 +130,10 @@ function runTests() {
 
   // 5. Test Safe Squares
   console.log("\n--- Test 5: Safe Squares (Kattas) ---");
-  assert(isSafeSquare(6, 3), "Bottom Home (6, 3) is a safe square");
-  assert(isSafeSquare(0, 3), "Top Home (0, 3) is a safe square");
-  assert(isSafeSquare(3, 0), "West Katta (3, 0) is a safe square");
-  assert(isSafeSquare(3, 6), "East Katta (3, 6) is a safe square");
+  assert(isSafeSquare(6, 3), "South Home 4 (6, 3) is a safe square");
+  assert(isSafeSquare(0, 3), "North Home 2 (0, 3) is a safe square");
+  assert(isSafeSquare(3, 0), "West Home 3 (3, 0) is a safe square");
+  assert(isSafeSquare(3, 6), "East Home 1 (3, 6) is a safe square");
   assert(isSafeSquare(1, 1), "NW Katta (1, 1) is a safe square");
   assert(isSafeSquare(1, 5), "NE Katta (1, 5) is a safe square");
   assert(isSafeSquare(5, 1), "SW Katta (5, 1) is a safe square");
@@ -128,44 +141,36 @@ function runTests() {
   assert(isSafeSquare(3, 3), "Center Sanctum (3, 3) is a safe square");
   assert(!isSafeSquare(0, 0), "NW Corner (0, 0) is NOT a safe square (vulnerable to kill!)");
 
-  // 6. Test Authentic Spiral Path (40 Steps matching User's Hand-drawn Diagram)
-  console.log("\n--- Test 6: Spiral Path & 5/5 Inside Ring Alignment (40 Steps) ---");
-  const spiralT1 = getPlayerPath(1, "spiral");
-  const spiralT2 = getPlayerPath(2, "spiral");
-  assert(spiralT1.length === 41, `Team 1 Spiral Path has exactly 41 points (indices 0..40, was ${spiralT1.length})`);
-  assert(spiralT2.length === 41, `Team 2 Spiral Path has exactly 41 points (indices 0..40, was ${spiralT2.length})`);
-  
-  // Team 1: Step 0 is Bottom Home (6, 3), Step 23 is Gate (6, 2), Step 24 enters 5/5 (5, 1), Step 40 is Center (3, 3)
-  assert(spiralT1[0].r === 6 && spiralT1[0].c === 3, "Team 1 Step 0 is Home 1 (6, 3)");
-  assert(spiralT1[23].r === 6 && spiralT1[23].c === 2, "Team 1 Step 23 is Gate 23 (6, 2)");
-  assert(spiralT1[24].r === 5 && spiralT1[24].c === 1, "Team 1 Step 24 enters inside 5/5 ring (5, 1)");
-  assert(spiralT1[40].r === 3 && spiralT1[40].c === 3, "Team 1 Step 40 is Center Sanctum (3, 3)");
+  // 6. Test Authentic 48-Step Spiral Path Structure (49 Points: Indices 0..48)
+  console.log("\n--- Test 6: Authentic 48-Step Spiral Path (49 Points) ---");
+  assert(pathH1.length === 49, `Team 1 Spiral Path has exactly 49 points (indices 0..48, was ${pathH1.length})`);
+  assert(pathH2.length === 49, `Team 2 Spiral Path has exactly 49 points (indices 0..48, was ${pathH2.length})`);
+  assert(pathH3.length === 49, `Team 3 Spiral Path has exactly 49 points (indices 0..48, was ${pathH3.length})`);
+  assert(pathH4.length === 49, `Team 4 Spiral Path has exactly 49 points (indices 0..48, was ${pathH4.length})`);
 
-  // Team 2: Step 0 is Top Home (0, 3), Step 23 is Gate (0, 4), Step 24 enters 5/5 (1, 5), Step 40 is Center (3, 3)
-  assert(spiralT2[0].r === 0 && spiralT2[0].c === 3, "Team 2 Step 0 is Home 2 (0, 3)");
-  assert(spiralT2[23].r === 0 && spiralT2[23].c === 4, "Team 2 Step 23 is Gate 23 (0, 4)");
-  assert(spiralT2[24].r === 1 && spiralT2[24].c === 5, "Team 2 Step 24 enters inside 5/5 ring (1, 5)");
-  assert(spiralT2[40].r === 3 && spiralT2[40].c === 3, "Team 2 Step 40 is Center Sanctum (3, 3)");
-
-  // 7. Test Step 23 Stopping Rule (Zero Kills)
-  console.log("\n--- Test 7: Step 23 Stop Rule (Zero Kills) ---");
+  // 7. Test Step 23 Exact Landing Rule (Zero Kills - No Overshoot Allowed)
+  console.log("\n--- Test 7: Step 23 Exact Landing Rule (Zero Kills) ---");
   const engine2 = new BharakhattaEngine({ gameMode: "2p" });
-  assert(engine2.pathStyle === "spiral", "Engine defaults to spiral path");
 
-  // Place a coin at step 20
+  // Place single active coin at step 22 with 0 kills
   const coinT1 = engine2.coins.find(c => c.team === 1 && c.num === 1);
   coinT1.inJail = false;
-  coinT1.stepIndex = 20;
-  coinT1.coord = { ...spiralT1[20] };
+  coinT1.stepIndex = 22;
+  coinT1.coord = { ...pathH1[22] };
 
-  // Roll 5 with 0 kills: target 25 overshoots 23 -> must clamp to step 23!
-  const movesRoll5Step20 = engine2.getLegalMoves(1, 5);
-  const moveStep20To23 = movesRoll5Step20.find(m => m.coin.id === coinT1.id);
-  assert(moveStep20To23 && moveStep20To23.toStep === 23, "Coin at step 20 rolling 5 stops at step 23 when team has 0 kills");
+  // User Rule: "if the coin at 22 nd step only one coin thn toss will get more thn 2or more mean no move (user still didnt kill) becuae only 1 needed to move step23"
+  const movesAt22Roll1 = engine2.getLegalMoves(1, 1).filter(m => m.coin && m.coin.id === coinT1.id);
+  assert(movesAt22Roll1.length === 1 && movesAt22Roll1[0].toStep === 23, "Coin at step 22 rolling 1 lands EXACTLY on Step 23 (Gate 23)");
+
+  // Rolling 2, 3, 4, 5, 6, 12 must yield NO MOVE (cannot overshoot 23 without kill)
+  for (const s of [2, 3, 4, 5, 6, 12]) {
+    const movesAt22Overshoot = engine2.getLegalMoves(1, s).filter(m => m.coin && m.coin.id === coinT1.id);
+    assert(movesAt22Overshoot.length === 0, `Coin at step 22 rolling ${s} has 0 legal moves (no overshoot past Gate 23 without kill)`);
+  }
 
   // Move coin to step 23
   engine2.status = GAME_STATUS.WAITING_FOR_MOVE;
-  engine2.executeMove(moveStep20To23, true, true);
+  engine2.executeMove(movesAt22Roll1[0], true, true);
   assert(coinT1.stepIndex === 23, "Coin is now parked at step 23");
 
   // When already at step 23 with 0 kills: rolling any score gives 0 moves for this coin!
@@ -174,26 +179,52 @@ function runTests() {
     assert(movesAt23.length === 0, `Coin parked at step 23 has 0 moves on roll of ${s} when kills = 0`);
   }
 
+  // Test coin at step 20 with 0 kills:
+  coinT1.stepIndex = 20;
+  coinT1.coord = { ...pathH1[20] };
+  const movesStep20Roll3 = engine2.getLegalMoves(1, 3).filter(m => m.coin && m.coin.id === coinT1.id);
+  assert(movesStep20Roll3.length === 1 && movesStep20Roll3[0].toStep === 23, "Coin at step 20 rolling 3 lands exactly on Gate 23");
+  const movesStep20Roll4 = engine2.getLegalMoves(1, 4).filter(m => m.coin && m.coin.id === coinT1.id);
+  assert(movesStep20Roll4.length === 0, "Coin at step 20 rolling 4 gives 0 moves (overshoots 23)");
+
   // 8. Test Unlocking 5/5 Ring After a Kill
   console.log("\n--- Test 8: Inside 5/5 Ring Unlocks After 1 Kill ---");
   engine2.team1Kills = 1; // Team 1 gets a kill!
+  coinT1.stepIndex = 23;
+  coinT1.coord = { ...pathH1[23] };
   const movesAt23WithKill = engine2.getLegalMoves(1, 1).filter(m => m.coin && m.coin.id === coinT1.id);
-  assert(movesAt23WithKill.length === 1 && movesAt23WithKill[0].toStep === 24, "Coin at step 23 rolling 1 enters step 24 (Inside 5/5 Ring!) after kill");
+  assert(movesAt23WithKill.length === 1 && movesAt23WithKill[0].toStep === 24, "Coin at step 23 rolling 1 enters step 24 (Inside 5/5 Ring at (5, 5)) after kill");
 
   const movesAt23Roll3 = engine2.getLegalMoves(1, 3).filter(m => m.coin && m.coin.id === coinT1.id);
-  assert(movesAt23Roll3.length === 1 && movesAt23Roll3[0].toStep === 26, "Coin at step 23 rolling 3 enters step 26 (Inside 5/5 Ring!) after kill");
+  assert(movesAt23Roll3.length === 1 && movesAt23Roll3[0].toStep === 26, "Coin at step 23 rolling 3 enters step 26 (Inside 5/5 Ring) after kill");
 
-  // 9. Test Win Condition (6 Coins into Final Home / Center Sanctum)
-  console.log("\n--- Test 9: 6 Coins in Final Home Win Condition ---");
+  // 9. Test Win Condition (6 Coins into Final Home / Center Sanctum at Step 48)
+  console.log("\n--- Test 9: 6 Coins in Final Home Win Condition (Step 48) ---");
   for (let i = 1; i <= 6; i++) {
     const c = engine2.coins.find(coin => coin.team === 1 && coin.num === i);
     c.inJail = false;
     c.isFinished = true;
-    c.stepIndex = 40;
+    c.stepIndex = 48;
     c.coord = { r: 3, c: 3 };
   }
-  assert(engine2.checkWinCondition(1) === true, "Team 1 wins when all 6 coins reach Center Sanctum (Final Home)");
+  assert(engine2.checkWinCondition(1) === true, "Team 1 wins when all 6 coins reach Center Sanctum (Happy Home at Step 48)");
   assert(engine2.checkWinCondition(2) === false, "Team 2 has not won");
+
+  // Test Auto-Move Detection (getSingleMovableMove)
+  console.log("\n--- Test 9b: Auto-Move Detection (Single Coin Out of Jail) ---");
+  const autoEngine = new BharakhattaEngine({ gameMode: "2p" });
+  // Release only 1 coin for Team 1
+  const singleActiveCoin = autoEngine.coins.find(c => c.team === 1 && c.num === 1);
+  singleActiveCoin.inJail = false;
+  singleActiveCoin.stepIndex = 5;
+  singleActiveCoin.coord = { ...pathH1[5] };
+
+  // Set roll to 3 (which cannot release jail, only moves the 1 active coin)
+  autoEngine.currentRoll = { score: 3, isBonus: false };
+  autoEngine.status = GAME_STATUS.WAITING_FOR_MOVE;
+  autoEngine.validMoves = autoEngine.getLegalMoves(1, 3);
+  const singleMove = autoEngine.getSingleMovableMove();
+  assert(singleMove !== null && singleMove.type === "MOVE_COIN" && singleMove.toStep === 8, "Auto-move detects the single movable coin without requiring user prompt");
 
   // 10. Test Mobile Number Login, Nick Name Generation, and Persistence
   console.log("\n--- Test 10: Mobile Number Login & Nick Name Persistence ---");
@@ -301,32 +332,33 @@ function runTests() {
   engine4p.advanceTurn();
   assert(engine4p.getCurrentPlayer().id === 1, "Turn wraps back to Player 1 (Team 1)");
 
-  // 13. Test Cupped Palm Cowrie Toss Rendering
-  console.log("\n--- Test 13: Cupped Palm Cowrie Toss View ---");
-  const testShells = [
-    { id: 0, isOpen: true },
-    { id: 1, isOpen: false },
-    { id: 2, isOpen: true },
-    { id: 3, isOpen: false },
-    { id: 4, isOpen: true },
-    { id: 5, isOpen: true }
-  ];
-  const palmHtml = renderCuppedPalm(testShells, false, true, true);
+  // 13. Test Folded Palm Cowrie Toss Rendering (Per User Photos)
+  console.log("\n--- Test 13: Folded Palm Cowrie Toss View ---");
+  const palmHtml = renderCuppedPalm(false, true, true);
   assert(palmHtml.includes("palm-cupped-box"), "Palm container rendered with palm-cupped-box id");
-  assert(palmHtml.includes("cupped-palm-svg"), "Cupped palm SVG graphic present");
-  assert(palmHtml.includes("Guvvalu in Palm"), "Prompt shows Guvvalu in Palm");
-  assert(palmHtml.includes("nestled-shell"), "Cowrie shells nestled inside cupped palm cavity");
+  assert(palmHtml.includes("folded-palm-svg"), "Folded palm SVG graphic present");
+  assert(palmHtml.includes("Folded Palm"), "Prompt shows Folded Palm");
 
-  const shakingPalmHtml = renderCuppedPalm(testShells, true, false, true);
-  assert(shakingPalmHtml.includes("hands-shaking-toss"), "Shaking animation active during roll toss");
-  assert(shakingPalmHtml.includes("shells-flying-out"), "Shells fly out animation active during toss");
+  const shakingPalmHtml = renderCuppedPalm(true, false, true);
+  assert(shakingPalmHtml.includes("shake-folded-fist"), "Shaking animation active during roll toss");
+  assert(shakingPalmHtml.includes("Shaking Palm (2 sec)"), "Shaking 2 sec status text active");
+
+  // In Cowrie Area after toss: Settled mat shows shells only, NOT palm!
+  const settledAreaHtml = renderCowrieArea({
+    status: "WAITING_FOR_MOVE",
+    currentRoll: { score: 4, titleTe: "చింత", isBonus: false },
+    diceMode: "cowries",
+    currentPlayer: { id: 1, name: "Player 1", isAI: false }
+  });
+  assert(settledAreaHtml.includes("settled-cowrie-mat"), "Settled state shows cowrie shells on board mat");
+  assert(!settledAreaHtml.includes("folded-palm-svg"), "Palm is completely hidden after toss (shells only on mat!)");
 
   // 14. Test Always 2 Homes Rule (2P and 4P modes)
-  console.log("\n--- Test 14: Always 2 Homes Rule (H1 Bottom & H2 Top) ---");
-  const p1Path = getPlayerPath(1, "spiral");
-  const p2Path = getPlayerPath(2, "spiral");
-  assert(p1Path[0].r === 6 && p1Path[0].c === 3, "Team 1 starts from Home 1 (Bottom, r=6, c=3)");
-  assert(p2Path[0].r === 0 && p2Path[0].c === 3, "Team 2 starts from Home 2 (Top, r=0, c=3)");
+  console.log("\n--- Test 14: Always 2 Homes Rule (H1 East & H2 North) ---");
+  const p1Path = getPlayerPath(1);
+  const p2Path = getPlayerPath(2);
+  assert(p1Path[0].r === 3 && p1Path[0].c === 6, "Team 1 starts from Home 1 (East, r=3, c=6)");
+  assert(p2Path[0].r === 0 && p2Path[0].c === 3, "Team 2 starts from Home 2 (North, r=0, c=3)");
 
   // In 4P mode, P1 & P3 are Team 1 (Home 1), P2 & P4 are Team 2 (Home 2)
   const test4pEngine = new BharakhattaEngine({ gameMode: "4p" });
@@ -386,7 +418,7 @@ function runTests() {
   t1Coins.forEach((coin, idx) => {
     coin.inJail = false;
     coin.stepIndex = 24 + idx; // Steps 24, 25, 26, 27, 28, 29 (all in 5/5 squad)
-    coin.coord = { ...spiralT1[coin.stepIndex] };
+    coin.coord = { ...pathH1[coin.stepIndex] };
   });
 
   assert(squadEngine.checkSquad5x5Win(1) === true, "checkSquad5x5Win returns true when all 6 coins are at step >= 24");
@@ -398,7 +430,7 @@ function runTests() {
     coin: t1Coins[0],
     fromStep: 24,
     toStep: 25,
-    targetCoord: { ...spiralT1[25] },
+    targetCoord: { ...pathH1[25] },
     isCapture: false,
     isSafe: false
   };

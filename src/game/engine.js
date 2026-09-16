@@ -151,10 +151,11 @@ export class BharakhattaEngine {
 
     this.currentRoll = rollResult;
 
-    // After roll animation settles (~600ms)
+    // Shake folded palm for 2 seconds (2000ms) per user requirement:
+    // "the first step is palm folded (per image) -> shake palm 2 sec -> release palm -> show shells only not palm"
     setTimeout(() => {
       this.resolveRoll(rollResult);
-    }, 600);
+    }, 2000);
 
     return rollResult;
   }
@@ -177,22 +178,25 @@ export class BharakhattaEngine {
     this.validMoves = moves;
 
     if (moves.length === 0) {
-      // No moves possible (e.g. rolled 2, 3, 4 with all coins in jail, or all active coins blocked)
+      // No moves possible (e.g. rolled 2, 3, 4 with all coins in jail, or coin at step 22 rolling 2+ with 0 kills)
       this.log(`⚠️ No valid moves possible with roll of ${score}.`);
 
       // Even if bonus was rolled, if no moves exist, turn continues or ends?
       // If bonus was rolled (1, 5, 6, 12), player gets to roll again!
+      // After toss wait for 1 sec every time before re-roll or pass
       if (rollResult.isBonus) {
         this.stats.bonusTurnsCount++;
         this.log(`✨ Bonus roll allowed ${player.name} another roll!`);
-        this.status = GAME_STATUS.WAITING_FOR_ROLL;
-        this.emitChange();
-        this.checkAITurn();
+        setTimeout(() => {
+          this.status = GAME_STATUS.WAITING_FOR_ROLL;
+          this.emitChange();
+          this.checkAITurn();
+        }, 1000);
       } else {
-        // Pass turn
+        // Pass turn after 1 second so player clearly sees the settled shells
         setTimeout(() => {
           this.advanceTurn();
-        }, 900);
+        }, 1000);
       }
       return;
     }
@@ -234,25 +238,30 @@ export class BharakhattaEngine {
       // Step 23 & Inside 5/5 Ring Entry Rule:
       // Outer perimeter is 24 squares (step 0 to step 23).
       // If team has 0 kills, coin CANNOT enter the inside 5/5 ring (step 24+).
-      // Coins STOP at step 23 only and remain blocked until at least one kill is made!
+      // Must land EXACTLY on Step 23. If roll overshoots 23 (e.g. at step 22 rolling 2+), NO MOVE is possible!
       if (this.requireKill && !hasKill) {
         if (coin.stepIndex === 23) {
           // Already stopped at step 23 waiting for kill: cannot move forward
           continue;
-        } else if (coin.stepIndex < 23 && coin.stepIndex + score >= 23) {
-          // Coin arrives at or reaches step 23: stops at step 23!
-          const targetCoord = path[23];
-          moves.push({
-            type: "MOVE_COIN",
-            coin,
-            fromStep: coin.stepIndex,
-            toStep: 23,
-            targetCoord,
-            isCapture: this.checkWillCapture(teamId, targetCoord),
-            isSafe: targetCoord.safe || isSafeSquare(targetCoord.r, targetCoord.c),
-            description: `Advance coin #${coin.num} to Step 23 (Stopped! Opponent kill needed to enter inside 5/5 ring)`
-          });
-          continue;
+        } else if (coin.stepIndex < 23) {
+          if (coin.stepIndex + score > 23) {
+            // Cannot overshoot Gate 23 without a kill! E.g. at step 22, rolling 2+ gives no move
+            continue;
+          } else if (coin.stepIndex + score === 23) {
+            // Exact landing on Gate 23!
+            const targetCoord = path[23];
+            moves.push({
+              type: "MOVE_COIN",
+              coin,
+              fromStep: coin.stepIndex,
+              toStep: 23,
+              targetCoord,
+              isCapture: this.checkWillCapture(teamId, targetCoord),
+              isSafe: targetCoord.safe || isSafeSquare(targetCoord.r, targetCoord.c),
+              description: `Advance coin #${coin.num} to Step 23 (Gate 23! Opponent kill needed to enter inside 5/5 ring)`
+            });
+            continue;
+          }
         }
       }
 
@@ -302,6 +311,7 @@ export class BharakhattaEngine {
 
   // Execute a selected move
   executeMove(move, force = false, instant = false) {
+    if (!move) return;
     if (!force && this.status !== GAME_STATUS.WAITING_FOR_MOVE) return;
 
     this.status = GAME_STATUS.ANIMATING_MOVE;
@@ -529,6 +539,36 @@ export class BharakhattaEngine {
     return null;
   }
 
+  // Check if there is only 1 coin out of jail, or only 1 single legal move possible
+  // In that case, no choice is needed from the player -> auto-move upon toss!
+  getSingleMovableMove() {
+    if (this.status !== GAME_STATUS.WAITING_FOR_MOVE) return null;
+    if (!this.validMoves || this.validMoves.length === 0) return null;
+
+    const currentTeam = this.getCurrentTeam();
+    const teamCoins = this.getTeamCoins(currentTeam);
+    const activeCoins = teamCoins.filter(c => !c.inJail && !c.isFinished);
+
+    // If exactly 1 coin is out of jail:
+    if (activeCoins.length === 1) {
+      const coinMoves = this.validMoves.filter(m => m.type === "MOVE_COIN" || m.type === "FINISH_COIN");
+      // If no jail release option exists (e.g. roll was not 1):
+      if (coinMoves.length === 1 && !this.validMoves.some(m => m.type === "RELEASE_JAIL")) {
+        return coinMoves[0];
+      }
+      if (this.validMoves.length === 1) {
+        return this.validMoves[0];
+      }
+    }
+
+    // If only 1 move is possible across the board:
+    if (this.validMoves.length === 1) {
+      return this.validMoves[0];
+    }
+
+    return null;
+  }
+
   checkWinCondition(teamId) {
     const finishedCoins = this.getFinishedCoins(teamId);
     return finishedCoins.length === 6;
@@ -558,7 +598,7 @@ export class BharakhattaEngine {
     } else if (this.status === GAME_STATUS.WAITING_FOR_MOVE) {
       setTimeout(() => {
         this.executeAIMove();
-      }, 800);
+      }, 1000);
     }
   }
 

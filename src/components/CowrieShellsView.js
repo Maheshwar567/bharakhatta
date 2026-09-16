@@ -57,80 +57,77 @@ export function renderCowrieShell(shell, isRolling) {
   `;
 }
 
-export function renderCuppedPalm(shells, isRolling, canRoll, isMyTurn) {
+export function renderFoldedPalm(isRolling, canRoll, isMyTurn) {
   return `
     <div class="palm-toss-stage ${isRolling ? 'palm-state-tossing' : 'palm-state-cupped'} ${canRoll ? 'palm-clickable' : ''}" 
          id="palm-cupped-box" 
-         title="${canRoll ? 'Tap palm to shake and toss guvvalu on board!' : ''}">
+         title="${canRoll ? 'Tap folded palm to shake for 2s and toss guvvalu!' : ''}">
       
-      <!-- Authentic Village Cupped Hands Graphic -->
-      <div class="cupped-hands-graphic ${isRolling ? 'hands-shaking-toss' : ''}">
-        <svg viewBox="0 0 160 110" class="cupped-palm-svg">
+      <!-- Authentic Village Folded Fist Graphic (Per User Photo) -->
+      <div class="folded-fist-graphic ${isRolling ? 'shake-folded-fist' : ''}">
+        <svg viewBox="0 0 140 140" class="folded-palm-svg">
           <defs>
-            <radialGradient id="palmShadow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#2a1607" stop-opacity="0.95" />
-              <stop offset="70%" stop-color="#422510" stop-opacity="0.7" />
-              <stop offset="100%" stop-color="#1a0b04" stop-opacity="0" />
+            <radialGradient id="fistGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffd194" stop-opacity="0.35" />
+              <stop offset="100%" stop-color="#d49a6a" stop-opacity="0" />
             </radialGradient>
-            <linearGradient id="handSkinLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#f7d4aa" />
-              <stop offset="50%" stop-color="#d49a6a" />
-              <stop offset="100%" stop-color="#9a5a2e" />
-            </linearGradient>
-            <linearGradient id="handSkinRight" x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#f7d4aa" />
-              <stop offset="50%" stop-color="#d49a6a" />
-              <stop offset="100%" stop-color="#9a5a2e" />
+            <linearGradient id="fistSkin" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f8d6ab" />
+              <stop offset="35%" stop-color="#e0a370" />
+              <stop offset="70%" stop-color="#b6733c" />
+              <stop offset="100%" stop-color="#7c431b" />
             </linearGradient>
           </defs>
 
-          <!-- Deep Palm Cavity Shadow where Guvvalu are cupped -->
-          <ellipse cx="80" cy="56" rx="48" ry="30" fill="url(#palmShadow)" />
+          <!-- Aura glow behind fist -->
+          <circle cx="70" cy="70" r="60" fill="url(#fistGlow)" />
 
-          <!-- Left Hand Palm & Curved Fingers -->
-          <path d="M 32,86 C 18,72 16,48 28,32 C 38,20 54,22 60,34 C 66,46 64,66 54,84 C 46,92 38,94 32,86 Z" 
-                fill="url(#handSkinLeft)" stroke="#5a2f12" stroke-width="2" />
-          <path d="M 46,26 C 52,16 66,16 70,26 C 74,38 70,54 58,64" 
-                fill="none" stroke="#5a2f12" stroke-width="1.8" stroke-linecap="round" />
-          <path d="M 28,40 C 22,32 32,20 44,24" 
-                fill="none" stroke="#7a411b" stroke-width="1.5" stroke-linecap="round" />
+          <!-- Wrist / Forearm base -->
+          <path d="M 50,118 L 48,138 L 92,138 L 90,118 Z" fill="#9e5f30" stroke="#502910" stroke-width="2" />
 
-          <!-- Right Hand Palm & Curved Fingers (Cupping together) -->
-          <path d="M 128,86 C 142,72 144,48 132,32 C 122,20 106,22 100,34 C 94,46 96,66 106,84 C 114,92 122,94 128,86 Z" 
-                fill="url(#handSkinRight)" stroke="#5a2f12" stroke-width="2" />
-          <path d="M 114,26 C 108,16 94,16 90,26 C 86,38 90,54 102,64" 
-                fill="none" stroke="#5a2f12" stroke-width="1.8" stroke-linecap="round" />
-          <path d="M 132,40 C 138,32 128,20 116,24" 
-                fill="none" stroke="#7a411b" stroke-width="1.5" stroke-linecap="round" />
+          <!-- Main palm back / ball of thumb -->
+          <path d="M 38,72 C 34,90 42,118 52,122 C 64,126 84,124 94,116 C 104,106 108,86 104,68 C 100,52 92,44 76,44 C 54,44 42,54 38,72 Z" 
+                fill="url(#fistSkin)" stroke="#502910" stroke-width="2.5" />
 
-          <!-- Joined Wrists at Bottom -->
-          <path d="M 46,88 Q 80,108 114,88 Q 80,96 46,88 Z" 
-                fill="#7a411b" stroke="#46220a" stroke-width="1.8" />
+          <!-- 4 Folded Finger Knuckles curled tightly holding shells inside -->
+          <!-- Index finger (top) -->
+          <path d="M 56,46 C 56,36 74,34 82,42 C 86,46 88,54 84,58 C 78,62 60,60 56,46 Z" 
+                fill="url(#fistSkin)" stroke="#502910" stroke-width="2" />
+          <!-- Middle finger -->
+          <path d="M 52,58 C 50,52 74,50 84,56 C 88,60 88,68 82,72 C 74,76 56,72 52,58 Z" 
+                fill="url(#fistSkin)" stroke="#502910" stroke-width="2" />
+          <!-- Ring finger -->
+          <path d="M 48,72 C 46,66 70,64 80,70 C 84,74 84,82 78,86 C 70,90 52,86 48,72 Z" 
+                fill="url(#fistSkin)" stroke="#502910" stroke-width="2" />
+          <!-- Pinky finger -->
+          <path d="M 46,86 C 44,82 66,80 74,84 C 78,88 78,96 72,98 C 64,102 48,98 46,86 Z" 
+                fill="url(#fistSkin)" stroke="#502910" stroke-width="2" />
+
+          <!-- Folded Thumb clamped over fingers -->
+          <path d="M 40,82 C 32,70 34,54 44,48 C 52,42 64,48 68,58 C 72,68 68,82 56,88 C 48,92 42,88 40,82 Z" 
+                fill="url(#fistSkin)" stroke="#502910" stroke-width="2.2" />
+
+          <!-- Thumbnail highlight -->
+          <ellipse cx="48" cy="54" rx="5" ry="7" fill="#f8e4cc" stroke="#b07b48" stroke-width="1" transform="rotate(-25 48 54)" />
+
+          <!-- Crease lines -->
+          <path d="M 64,62 Q 74,68 84,62" fill="none" stroke="#683415" stroke-width="1.6" stroke-linecap="round" />
+          <path d="M 60,76 Q 70,82 80,76" fill="none" stroke="#683415" stroke-width="1.6" stroke-linecap="round" />
+          <path d="M 56,90 Q 66,94 74,90" fill="none" stroke="#683415" stroke-width="1.6" stroke-linecap="round" />
         </svg>
-
-        <!-- 6 Cowrie Shells Nestled Inside Palm -->
-        <div class="palm-shells-nest ${isRolling ? 'shells-flying-out' : ''}">
-          ${shells.map((s, idx) => {
-            const nestX = [-18, 14, -6, 16, -12, 4][idx] || 0;
-            const nestY = [-6, -6, 6, 8, 14, 0][idx] || 0;
-            const nestRot = [-15, 20, -8, 14, 25, -20][idx] || 0;
-            return `
-              <div class="nestled-shell shell-pos-${idx}" style="transform: translate(${nestX}px, ${nestY}px) rotate(${nestRot}deg);">
-                ${renderCowrieShell(s, isRolling)}
-              </div>
-            `;
-          }).join('')}
-        </div>
       </div>
 
-      <!-- Village Cupped Palm Interaction Prompt -->
+      <!-- Village Folded Palm Interaction Prompt -->
       <div class="palm-prompt-badge ${canRoll ? 'pulse-gold' : ''}">
-        <span class="palm-prompt-icon">🤲</span>
-        <span class="palm-prompt-text">${canRoll ? 'Guvvalu in Palm — Tap to Toss!' : isRolling ? 'Shaking & Tossing...' : 'Guvvalu in Palm'}</span>
+        <span class="palm-prompt-icon">✊</span>
+        <span class="palm-prompt-text">${canRoll ? 'Folded Palm — Tap to Shake & Toss!' : isRolling ? 'Shaking Palm (2 sec)...' : 'Folded Palm with Guvvalu'}</span>
       </div>
     </div>
   `;
 }
+
+// For backwards compatibility
+export const renderCuppedPalm = renderFoldedPalm;
 
 export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
   const { status, currentRoll, diceMode, currentPlayer } = gameState;
@@ -166,12 +163,14 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
           { id: 5, isOpen: true, rot: -25, x: 1, y: -2 }
         ];
 
-    // Palm Cowrie Toss View:
-    // If waiting to roll or actively rolling: show cowries hidden inside the cupped palm!
+    // User rule:
+    // 1st step: palm folded (per image)
+    // 2nd step: shake palm 2 sec
+    // 3rd step: release palm -> SHOW SHELLS ONLY, NOT PALM!
     if (status === "WAITING_FOR_ROLL" || isRolling) {
-      shellsHtml = renderCuppedPalm(shells, isRolling, canRoll, isMyTurn);
+      shellsHtml = renderFoldedPalm(isRolling, canRoll, isMyTurn);
     } else {
-      // Settled on the board mat after toss
+      // Settled after toss: show SHELLS ONLY on the board mat, NO PALM!
       shellsHtml = `
         <div class="settled-cowrie-mat">
           <div class="mat-label">🌾 Tossed on Board Mat</div>
@@ -191,7 +190,7 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
       <div class="compact-score-badge ${isBonus ? 'score-bonus-glow' : ''}">
         <div class="score-main">
           <span class="score-large">${currentRoll.score}</span>
-          <span class="score-name">${currentRoll.titleTe}</span>
+          <span class="score-name">${currentRoll.titleTe || ''}</span>
         </div>
         ${isBonus ? '<span class="bonus-pill">⭐ BONUS!</span>' : ''}
       </div>
@@ -200,7 +199,7 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
     scoreBadgeHtml = `
       <div class="compact-score-badge rolling-badge">
         <span class="rolling-dot">⏳</span>
-        <span>Tossing from Palm...</span>
+        <span>Shaking Palm (2 sec)...</span>
       </div>
     `;
   } else {
@@ -213,8 +212,8 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
   }
 
   // Button text
-  let rollBtnText = "🤲 TOSS GUVVALU";
-  if (isRolling) rollBtnText = "Tossing...";
+  let rollBtnText = "✊ TOSS GUVVALU";
+  if (isRolling) rollBtnText = "Shaking (2s)...";
   else if (!isMyTurn) {
     rollBtnText = mpState && mpState.roomCode ? `Waiting for ${currentPlayer.name}...` : "Computer Thinking...";
   }
