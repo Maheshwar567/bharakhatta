@@ -485,6 +485,65 @@ function runTests() {
   toggleLanguage();
   assert(getLanguage() === "en", "Language toggles back to English");
 
+  // 19. Test Multi-Coin Co-existence & Movement in Same Box (Along Path & Home)
+  console.log("\n--- Test 19: Multiple Friendly Coins in Same Box & Independent Movement ---");
+  const multiCoinEngine = new BharakhattaEngine({ gameMode: "2p" });
+  const team1Coins = multiCoinEngine.getTeamCoins(1);
+
+  // Setup: Coin 1 is at step 3 (Box 3), Coin 2 is at step 0 (Home Base)
+  team1Coins[0].inJail = false;
+  team1Coins[0].stepIndex = 3;
+  team1Coins[0].coord = { ...pathH1[3] };
+
+  team1Coins[1].inJail = false;
+  team1Coins[1].stepIndex = 0;
+  team1Coins[1].coord = { ...pathH1[0] };
+
+  multiCoinEngine.status = GAME_STATUS.WAITING_FOR_MOVE;
+  multiCoinEngine.lastRoll = { score: 3, isBonus: false, releasesCoins: 0 };
+  const legalMovesRoll3 = multiCoinEngine.getLegalMoves(1, 3);
+
+  // Legal moves should include:
+  // 1) Moving Coin 2 from Step 0 -> Step 3 (joining Coin 1 in Box 3!)
+  // 2) Moving Coin 1 from Step 3 -> Step 6
+  const moveToSameBox = legalMovesRoll3.find(m => m.coin.id === team1Coins[1].id && m.toStep === 3);
+  assert(moveToSameBox !== undefined, "Coin 2 at Home can legally move to Step 3 (Box 3) where Coin 1 is already present");
+
+  // Execute the move of Coin 2 to Box 3
+  multiCoinEngine.executeMove(moveToSameBox, true, true);
+  assert(team1Coins[0].stepIndex === 3, "Coin 1 remains at Step 3 (Box 3)");
+  assert(team1Coins[1].stepIndex === 3, "Coin 2 successfully moved into Step 3 (Box 3)");
+  assert(team1Coins[0].coord.r === pathH1[3].r && team1Coins[0].coord.c === pathH1[3].c, "Coin 1 coordinate matches Step 3");
+  assert(team1Coins[1].coord.r === pathH1[3].r && team1Coins[1].coord.c === pathH1[3].c, "Coin 2 coordinate matches Step 3");
+  assert(!team1Coins[0].inJail && !team1Coins[1].inJail, "Friendly coins co-exist without capturing or jailing each other");
+
+  // Now, both Coin 1 and Coin 2 are in Box 3 (step 3).
+  // Simulate next turn with roll = 2
+  multiCoinEngine.status = GAME_STATUS.WAITING_FOR_MOVE;
+  multiCoinEngine.lastRoll = { score: 2, isBonus: false, releasesCoins: 0 };
+  const legalMovesRoll2 = multiCoinEngine.getLegalMoves(1, 2);
+
+  const moveCoin1 = legalMovesRoll2.find(m => m.coin.id === team1Coins[0].id && m.toStep === 5);
+  const moveCoin2 = legalMovesRoll2.find(m => m.coin.id === team1Coins[1].id && m.toStep === 5);
+  assert(moveCoin1 !== undefined && moveCoin2 !== undefined, "Both coins in Box 3 have independent valid moves to Step 5");
+
+  // Move Coin 1 out of Box 3 to Step 5
+  multiCoinEngine.executeMove(moveCoin1, true, true);
+  assert(team1Coins[0].stepIndex === 5, "Coin 1 moved forward to Step 5");
+  assert(team1Coins[1].stepIndex === 3, "Coin 2 stayed safely behind in Step 3 (Box 3)");
+
+  // Test 3 coins sharing a box: Add Coin 3 and Coin 4 to Step 5
+  team1Coins[2].inJail = false;
+  team1Coins[2].stepIndex = 5;
+  team1Coins[2].coord = { ...pathH1[5] };
+
+  team1Coins[3].inJail = false;
+  team1Coins[3].stepIndex = 5;
+  team1Coins[3].coord = { ...pathH1[5] };
+
+  const coinsAtStep5 = team1Coins.filter(c => c.stepIndex === 5);
+  assert(coinsAtStep5.length === 3, "3 friendly coins co-exist seamlessly in Step 5");
+
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);
   console.log(`===================================\n`);

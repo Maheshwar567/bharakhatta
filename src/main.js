@@ -111,6 +111,7 @@ class BharakhattaApp {
 
     // Auto-move timer (1-second pause after toss)
     this.autoMoveTimer = null;
+    this.selectedCoinId = null;
 
     this.initDOM();
 
@@ -267,6 +268,7 @@ class BharakhattaApp {
   }
 
   handleTurnChange(player) {
+    this.selectedCoinId = null;
     if (this.autoMoveTimer) {
       clearTimeout(this.autoMoveTimer);
       this.autoMoveTimer = null;
@@ -414,6 +416,7 @@ class BharakhattaApp {
     if (this.mpState.roomCode && state.currentPlayer.id !== this.mpState.myPlayerId) return;
     if (!this.mpState.roomCode && state.currentPlayer.isAI) return;
 
+    this.selectedCoinId = null;
     if (this.autoMoveTimer) {
       clearTimeout(this.autoMoveTimer);
       this.autoMoveTimer = null;
@@ -431,6 +434,7 @@ class BharakhattaApp {
   }
 
   attemptMove(move) {
+    this.selectedCoinId = null;
     if (this.autoMoveTimer) {
       clearTimeout(this.autoMoveTimer);
       this.autoMoveTimer = null;
@@ -699,7 +703,7 @@ class BharakhattaApp {
     };
 
     if (headerEl) headerEl.innerHTML = renderHeader(state, this.soundMuted, this.mpState, headerOptions);
-    if (boardEl) boardEl.innerHTML = renderBoard(state, this.mpState);
+    if (boardEl) boardEl.innerHTML = renderBoard(state, this.mpState, this.selectedCoinId);
     if (cowrieEl) cowrieEl.innerHTML = renderCowrieArea(state, this.mpState, this.turnTimer.getTimeLeft());
     if (tickerEl) tickerEl.innerHTML = renderToastFeed(this.logs);
 
@@ -808,30 +812,81 @@ class BharakhattaApp {
       };
     }
 
-    // Coin clicks
-    const coinEls = document.querySelectorAll(".coin-selectable");
+    // Coin clicks (supports selecting a coin, and moving into a box that already has other coins)
+    const coinEls = document.querySelectorAll(".coin-piece");
     coinEls.forEach(el => {
       el.onclick = (e) => {
         e.stopPropagation();
         const coinId = el.getAttribute("data-coin-id");
-        const move = state.validMoves.find(m => m.coin && m.coin.id === coinId);
-        if (move) {
-          this.attemptMove(move);
-        } else if (state.validMoves.some(m => m.type === "RELEASE_JAIL")) {
+        if (!coinId) return;
+
+        // Case A: A coin is already selected, and user clicks on a cell containing another coin
+        // that happens to be the selected coin's target destination!
+        // This allows placing two or more coins in the same box without accidentally moving the existing coin away!
+        if (this.selectedCoinId && this.selectedCoinId !== coinId) {
+          const cellEl = el.closest(".board-cell");
+          if (cellEl) {
+            const r = parseInt(cellEl.getAttribute("data-r"), 10);
+            const c = parseInt(cellEl.getAttribute("data-c"), 10);
+            const selectedMove = state.validMoves.find(m => m.coin && m.coin.id === this.selectedCoinId && m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c);
+            if (selectedMove) {
+              this.selectedCoinId = null;
+              this.attemptMove(selectedMove);
+              return;
+            }
+          }
+        }
+
+        // Case B: Check if this coin has valid moves
+        const movesForThisCoin = state.validMoves.filter(m => m.coin && m.coin.id === coinId);
+        if (movesForThisCoin.length > 0) {
+          // If only 1 movable coin exists across the board or user tapped the already selected coin: execute!
+          const allMovableCoinIds = new Set(state.validMoves.filter(m => m.coin).map(m => m.coin.id));
+          if (this.selectedCoinId === coinId || allMovableCoinIds.size === 1) {
+            this.selectedCoinId = null;
+            this.attemptMove(movesForThisCoin[0]);
+          } else {
+            // Select this coin so user can view its destination
+            this.selectedCoinId = coinId;
+            this.render();
+          }
+          return;
+        }
+
+        // Case C: Jail release click
+        if (state.validMoves.some(m => m.type === "RELEASE_JAIL")) {
           const jailMove = state.validMoves.find(m => m.type === "RELEASE_JAIL");
-          if (jailMove) this.attemptMove(jailMove);
+          if (jailMove) {
+            this.selectedCoinId = null;
+            this.attemptMove(jailMove);
+          }
         }
       };
     });
 
-    // Target cell clicks
+    // Target cell clicks (moves selected coin or matching coin into this box)
     const targetCells = document.querySelectorAll(".cell-valid-target");
     targetCells.forEach(cell => {
       cell.onclick = () => {
         const r = parseInt(cell.getAttribute("data-r"), 10);
         const c = parseInt(cell.getAttribute("data-c"), 10);
+
+        // If a coin is selected, move that selected coin into this cell
+        if (this.selectedCoinId) {
+          const move = state.validMoves.find(m => m.coin && m.coin.id === this.selectedCoinId && m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c);
+          if (move) {
+            this.selectedCoinId = null;
+            this.attemptMove(move);
+            return;
+          }
+        }
+
+        // If no coin is selected, move the coin targeting this cell
         const move = state.validMoves.find(m => m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c);
-        if (move) this.attemptMove(move);
+        if (move) {
+          this.selectedCoinId = null;
+          this.attemptMove(move);
+        }
       };
     });
 

@@ -3,7 +3,7 @@
 
 import { isSafeSquare, isCenterSquare } from "../game/board.js";
 
-export function renderBoard(gameState, mpState = null) {
+export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
   const { coins, validMoves, currentPlayer, status, team1Kills, team2Kills, players } = gameState;
   const isWaitingMove = status === "WAITING_FOR_MOVE";
   const currentTeam = currentPlayer.team;
@@ -48,10 +48,15 @@ export function renderBoard(gameState, mpState = null) {
       const cellKey = `${r}_${c}`;
       const occupants = cellCoinsMap[cellKey] || [];
 
-      // Check if this cell is a target destination for any valid move
-      const matchingMove = (isWaitingMove && isMyTurn)
-        ? validMoves.find(m => m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c)
-        : null;
+      // Check if this cell is a target destination for the selected coin or any valid move
+      let matchingMove = null;
+      if (isWaitingMove && isMyTurn) {
+        if (selectedCoinId) {
+          matchingMove = validMoves.find(m => m.coin && m.coin.id === selectedCoinId && m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c);
+        } else {
+          matchingMove = validMoves.find(m => m.targetCoord && m.targetCoord.r === r && m.targetCoord.c === c);
+        }
+      }
 
       const isH1Gate = (r === 4 && c === 6);
       const isH2Gate = (r === 0 && c === 4);
@@ -119,16 +124,22 @@ export function renderBoard(gameState, mpState = null) {
       // Coins inside this cell
       const coinsHtml = occupants.map((coin, idx) => {
         const hasMove = isWaitingMove && isMyTurn && validMoves.some(m => m.coin && m.coin.id === coin.id);
-        return renderCoinPiece(coin, hasMove, occupants.length, idx);
+        const isSelected = selectedCoinId === coin.id;
+        return renderCoinPiece(coin, hasMove, isSelected, occupants.length, idx);
       }).join("");
+
+      const stackBadgeHtml = occupants.length >= 2
+        ? `<span class="cell-stack-badge" title="${occupants.length} coins sharing this box">x${occupants.length}</span>`
+        : "";
 
       gridHtml += `
         <div class="${cellClasses.join(" ")}" data-r="${r}" data-c="${c}">
           ${markerHtml}
-          <div class="cell-coins-container">
+          ${stackBadgeHtml}
+          <div class="cell-coins-container coins-count-${occupants.length}">
             ${coinsHtml}
           </div>
-          ${matchingMove ? `<div class="target-indicator">⭐</div>` : ""}
+          ${matchingMove ? `<div class="target-indicator ${selectedCoinId ? 'target-for-selected' : ''}">⭐</div>` : ""}
         </div>
       `;
     }
@@ -153,7 +164,7 @@ export function renderBoard(gameState, mpState = null) {
         <div class="jail-slots">
           ${team2JailCoins.map((coin, idx) => {
             const isPlayable = isWaitingMove && isMyTurn && currentTeam === 2 && canRelease;
-            return renderCoinPiece(coin, isPlayable, team2JailCoins.length, idx, true);
+            return renderCoinPiece(coin, isPlayable, false, team2JailCoins.length, idx, true);
           }).join("")}
         </div>
 
@@ -185,7 +196,7 @@ export function renderBoard(gameState, mpState = null) {
         <div class="jail-slots">
           ${team1JailCoins.map((coin, idx) => {
             const isPlayable = isWaitingMove && isMyTurn && currentTeam === 1 && canRelease;
-            return renderCoinPiece(coin, isPlayable, team1JailCoins.length, idx, true);
+            return renderCoinPiece(coin, isPlayable, false, team1JailCoins.length, idx, true);
           }).join("")}
         </div>
 
@@ -216,33 +227,31 @@ export function renderBoard(gameState, mpState = null) {
 }
 
 // Renders an individual Coin Piece (Pawn)
-export function renderCoinPiece(coin, isSelectable, totalInCell = 1, indexInCell = 0, isJail = false) {
+export function renderCoinPiece(coin, isSelectable, isSelected = false, totalInCell = 1, indexInCell = 0, isJail = false) {
   const teamColorClass = coin.team === 1 ? "coin-team1" : "coin-team2";
   const selectableClass = isSelectable ? "coin-selectable" : "";
+  const selectedClass = isSelected ? "coin-selected" : "";
   const isStoppedAt23 = coin.stepIndex === 23;
 
-  let offsetStyle = "";
-  if (!isJail && totalInCell > 1) {
-    const angle = (indexInCell / totalInCell) * 2 * Math.PI;
-    const radius = Math.min(14, totalInCell * 3.5);
-    const ox = Math.round(Math.cos(angle) * radius);
-    const oy = Math.round(Math.sin(angle) * radius);
-    offsetStyle = `style="transform: translate(${ox}px, ${oy}px); z-index: ${10 + indexInCell};"`;
+  let sizeClass = "coin-size-1";
+  if (!isJail) {
+    if (totalInCell === 2) sizeClass = "coin-size-2";
+    else if (totalInCell >= 3 && totalInCell <= 4) sizeClass = "coin-size-4";
+    else if (totalInCell >= 5) sizeClass = "coin-size-6";
   }
 
   const pieceTitle = isStoppedAt23
     ? `Team ${coin.team} Coin #${coin.num} (Stopped at Step 23 Gate - Opponent kill required to enter inside 5/5 ring)`
-    : `Team ${coin.team} Coin #${coin.num} ${isSelectable ? '- Click to Move' : ''}`;
+    : `Team ${coin.team} Coin #${coin.num} ${isSelected ? '(Selected) - Tap destination to move' : (isSelectable ? '- Tap to Select & Move' : '')}`;
 
   return `
-    <div class="coin-piece ${teamColorClass} ${selectableClass} ${isStoppedAt23 ? 'coin-stopped-23' : ''}" 
+    <div class="coin-piece ${teamColorClass} ${selectableClass} ${selectedClass} ${sizeClass} ${isStoppedAt23 ? 'coin-stopped-23' : ''}" 
          data-coin-id="${coin.id}" 
          data-team="${coin.team}"
-         ${offsetStyle}
          title="${pieceTitle}">
       <span class="coin-num">${coin.num}</span>
       ${isStoppedAt23 ? `<span class="coin-gate-badge">23</span>` : ""}
-      ${isSelectable ? `<span class="coin-pulse-ring"></span>` : ""}
+      ${isSelectable && !isSelected ? `<span class="coin-pulse-ring"></span>` : ""}
     </div>
   `;
 }
