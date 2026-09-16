@@ -155,7 +155,7 @@ export function setupMultiplayerServer(httpServer) {
         }
 
         // Forward gameplay actions to room peers
-        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR") {
+        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "SYNC_GAME_STATE" || type === "GATE_23_DECISION" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR") {
           if (!currentRoomCode) return;
           const room = rooms.get(currentRoomCode);
           if (!room) return;

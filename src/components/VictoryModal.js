@@ -1,6 +1,7 @@
 // Victory modal celebration with confetti and match statistics
 
 import confetti from "canvas-confetti";
+import { t } from "../utils/i18n.js";
 
 export function renderVictoryModal(winner, onRestart) {
   if (!winner) return "";
@@ -33,17 +34,21 @@ export function renderVictoryModal(winner, onRestart) {
   }, 100);
 
   const teamName = winner.team === 1 ? "Team 1 (Saffron / Bottom)" : "Team 2 (Green / Top)";
+  const isSquadWin = winner.reason === "SQUAD_5X5_COMPLETE";
+  const victoryQuote = isSquadWin 
+    ? t("winReasonSquad", { team: winner.team })
+    : t("winReasonCenter");
 
   return `
     <div class="modal-backdrop" id="victory-modal-backdrop">
       <div class="modal-dialog victory-dialog">
         <div class="victory-header">
           <div class="trophy-bounce">🏆</div>
-          <h2 class="victory-title">VICTORY!</h2>
-          <span class="victory-subtitle">${teamName} Wins Bharakhatta!</span>
+          <h2 class="victory-title">${t("victoryTitle")}</h2>
+          <span class="victory-subtitle">${t("victoryDesc", { team: winner.team })} (${teamName})</span>
         </div>
 
-        <div class="victory-body">
+        <div class="modal-body">
           <div class="victory-stats-grid">
             <div class="stat-card">
               <span class="stat-num">${winner.stats.rollsCount || 0}</span>
@@ -62,12 +67,16 @@ export function renderVictoryModal(winner, onRestart) {
               <span class="stat-lbl">Match Duration</span>
             </div>
           </div>
-          <p class="victory-quote">All 6 coins have reached the inner sanctum home! Superb strategy and village gaming prowess.</p>
+          <div style="margin-top: 14px; background: rgba(241, 196, 15, 0.15); border: 1px solid rgba(241, 196, 15, 0.4); padding: 12px; border-radius: 8px;">
+            <p class="victory-quote" style="margin: 0; color: #f1c40f; font-weight: 500; font-size: 0.95rem;">
+              ${victoryQuote}
+            </p>
+          </div>
         </div>
 
         <div class="modal-footer">
           <button class="btn-primary btn-play-again" id="btn-victory-restart">
-            🔄 Play Rematch
+            ${t("rematchBtn")}
           </button>
         </div>
       </div>

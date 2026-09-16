@@ -2,6 +2,7 @@
 // Displays 2/4 player selection, mode selector, prominent 'Request Friend' action, and bet selector
 
 import { BET_TIERS } from "../game/wallet.js";
+import { t, getLanguage } from "../utils/i18n.js";
 
 export function renderLobbyView(options = {}) {
   const {
@@ -14,6 +15,7 @@ export function renderLobbyView(options = {}) {
 
   const nickName = user ? (user.nickName || user.name || "Player") : "Player";
   const potAmount = selectedBet * 2;
+  const currentLang = getLanguage();
 
   return `
     <div class="lobby-overlay-container">
@@ -24,13 +26,18 @@ export function renderLobbyView(options = {}) {
             <span class="lobby-shell-icon">🐚</span>
             <div>
               <h1 class="lobby-title">బాఱఖట్టా • BHARAKHATTA</h1>
-              <span class="lobby-subtitle">Traditional 7x7 Village Cowrie Board Game</span>
+              <span class="lobby-subtitle">${t("appSubtitle")}</span>
             </div>
           </div>
-          <div class="lobby-user-pill" id="btn-lobby-profile" title="View Profile & Match History">
-            <span class="user-avatar">👤</span>
-            <span class="user-nick">${nickName}</span>
-            <span class="user-balance">🪙 ${walletCoins.toLocaleString()}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-icon btn-lang-toggle" id="btn-lobby-lang-toggle" title="Switch Language / భాష మార్చండి" style="font-weight: 700; color: #f1c40f; border: 1px solid rgba(241,196,15,0.4); background: rgba(241,196,15,0.12); padding: 6px 10px; border-radius: 20px; cursor: pointer;">
+              ${currentLang === "en" ? "🌐 తెలుగు" : "🌐 English"}
+            </button>
+            <div class="lobby-user-pill" id="btn-lobby-profile" title="View Profile & Match History">
+              <span class="user-avatar">👤</span>
+              <span class="user-nick">${nickName}</span>
+              <span class="user-balance">🪙 ${walletCoins.toLocaleString()}</span>
+            </div>
           </div>
         </div>
 
@@ -39,14 +46,14 @@ export function renderLobbyView(options = {}) {
           <div class="lobby-section">
             <div class="section-title-bar">
               <span class="step-num">1</span>
-              <span class="section-heading">Choose Player Count (2 or 4)</span>
+              <span class="section-heading">${t("selectPlayerCount")}</span>
             </div>
             <div class="player-count-toggle-grid">
               <button class="btn-player-count ${playerCount === 2 ? 'count-active' : ''}" id="btn-count-2p" data-count="2">
                 <span class="count-icon">👥</span>
                 <div class="count-text">
-                  <strong>2 Players</strong>
-                  <span>1 vs 1 Head to Head</span>
+                  <strong>${t("twoPlayers")}</strong>
+                  <span>${t("twoPlayersSub")}</span>
                 </div>
                 ${playerCount === 2 ? '<span class="count-check">✔</span>' : ''}
               </button>
@@ -54,8 +61,8 @@ export function renderLobbyView(options = {}) {
               <button class="btn-player-count ${playerCount === 4 ? 'count-active' : ''}" id="btn-count-4p" data-count="4">
                 <span class="count-icon">👥👥</span>
                 <div class="count-text">
-                  <strong>4 Players</strong>
-                  <span>2 vs 2 Team Match</span>
+                  <strong>${t("fourPlayers")}</strong>
+                  <span>${t("fourPlayersSub")}</span>
                 </div>
                 ${playerCount === 4 ? '<span class="count-check">✔</span>' : ''}
               </button>
@@ -66,7 +73,7 @@ export function renderLobbyView(options = {}) {
           <div class="lobby-section">
             <div class="section-title-bar">
               <span class="step-num">2</span>
-              <span class="section-heading">${playerCount === 2 ? 'Select 2-Player Mode' : 'Select 4-Player Mode'}</span>
+              <span class="section-heading">${playerCount === 2 ? t("selectMode2p") : t("selectMode4p")}</span>
             </div>
 
             ${playerCount === 2 ? `
@@ -75,8 +82,8 @@ export function renderLobbyView(options = {}) {
                 <button class="btn-mode-card ${selectedMode === 'solo' ? 'mode-active' : ''}" id="btn-select-mode-solo">
                   <span class="mode-icon">🤖</span>
                   <div class="mode-info">
-                    <strong>Play vs Computer (1v1)</strong>
-                    <span>Solo match with System AI</span>
+                    <strong>${t("playVsComputer")}</strong>
+                    <span>${t("playVsComputerSub")}</span>
                   </div>
                   ${selectedMode === 'solo' ? '<span class="mode-check">✔</span>' : ''}
                 </button>
@@ -84,8 +91,8 @@ export function renderLobbyView(options = {}) {
                 <button class="btn-mode-card ${selectedMode === 'friend' ? 'mode-active' : ''}" id="btn-select-mode-friend">
                   <span class="mode-icon">👥</span>
                   <div class="mode-info">
-                    <strong>Play with Friend (1v1)</strong>
-                    <span>Invite friend on other mobile with Board #</span>
+                    <strong>${t("playWithFriend2p")}</strong>
+                    <span>${t("playWithFriend2pSub")}</span>
                   </div>
                   ${selectedMode === 'friend' ? '<span class="mode-check">✔</span>' : ''}
                 </button>
@@ -96,8 +103,8 @@ export function renderLobbyView(options = {}) {
                 <button class="btn-mode-card ${selectedMode === '4p_ai_pair' ? 'mode-active' : ''}" id="btn-select-mode-4p-pair">
                   <span class="mode-icon">🤝</span>
                   <div class="mode-info">
-                    <strong>2 Friends + 2 AI Pair</strong>
-                    <span>You & Friend (Team 1) vs System AI Pair (Team 2)</span>
+                    <strong>${t("twoFriendsAIPair")}</strong>
+                    <span>${t("twoFriendsAIPairSub")}</span>
                   </div>
                   ${selectedMode === '4p_ai_pair' ? '<span class="mode-check">✔</span>' : ''}
                 </button>
@@ -105,8 +112,8 @@ export function renderLobbyView(options = {}) {
                 <button class="btn-mode-card ${selectedMode === '4p_solo' ? 'mode-active' : ''}" id="btn-select-mode-4p-solo">
                   <span class="mode-icon">🤖</span>
                   <div class="mode-info">
-                    <strong>Solo (1 Human + 3 AI)</strong>
-                    <span>You & AI Partner vs 2 AI Opponents</span>
+                    <strong>${t("solo4p")}</strong>
+                    <span>${t("solo4pSub")}</span>
                   </div>
                   ${selectedMode === '4p_solo' ? '<span class="mode-check">✔</span>' : ''}
                 </button>
@@ -114,8 +121,8 @@ export function renderLobbyView(options = {}) {
                 <button class="btn-mode-card ${selectedMode === '4p_friends' ? 'mode-active' : ''}" id="btn-select-mode-4p-friends">
                   <span class="mode-icon">👥👥</span>
                   <div class="mode-info">
-                    <strong>4 Friends Online</strong>
-                    <span>Send Board # to request friends</span>
+                    <strong>${t("fourFriendsOnline")}</strong>
+                    <span>${t("fourFriendsOnlineSub")}</span>
                   </div>
                   ${selectedMode === '4p_friends' ? '<span class="mode-check">✔</span>' : ''}
                 </button>
@@ -127,8 +134,8 @@ export function renderLobbyView(options = {}) {
               <button class="btn-request-friend-hero" id="btn-lobby-request-friend">
                 <span class="rf-icon">📲</span>
                 <div class="rf-content">
-                  <strong>Request Friend to Play on Same Board</strong>
-                  <span>Share Board Number, WhatsApp Invite & QR Code</span>
+                  <strong>${t("requestFriendHero")}</strong>
+                  <span>${t("requestFriendHeroSub")}</span>
                 </div>
                 <span class="rf-arrow">➔</span>
               </button>
@@ -139,7 +146,7 @@ export function renderLobbyView(options = {}) {
           <div class="lobby-section">
             <div class="section-title-bar">
               <span class="step-num">3</span>
-              <span class="section-heading">Choose Pot Coins / Bet Stakes</span>
+              <span class="section-heading">${t("choosePotCoins")}</span>
             </div>
             
             <div class="bet-chips-grid">
@@ -164,12 +171,12 @@ export function renderLobbyView(options = {}) {
             <!-- Pot Summary Card -->
             <div class="pot-preview-banner">
               <div class="preview-item">
-                <span class="preview-label">Your Stake</span>
+                <span class="preview-label">${t("yourStake")}</span>
                 <span class="preview-val stake-val">🪙 ${selectedBet.toLocaleString()}</span>
               </div>
               <div class="preview-arrow">➔</div>
               <div class="preview-item">
-                <span class="preview-label">Winner Takes Pot</span>
+                <span class="preview-label">${t("winnerTakesPot")}</span>
                 <span class="preview-val pot-val">🏆 🪙 ${potAmount.toLocaleString()}</span>
               </div>
             </div>
@@ -179,15 +186,15 @@ export function renderLobbyView(options = {}) {
         <!-- Step 4: Start Game (Centered Down Middle) -->
         <div class="lobby-footer-center">
           <button class="btn-primary btn-start-game-lobby" id="btn-lobby-start-game">
-            🎲 Start Game (Pot: 🪙${potAmount.toLocaleString()})
+            🎲 ${t("startGame")} (Pot: 🪙${potAmount.toLocaleString()})
           </button>
 
           <div class="lobby-sub-actions">
-            <button class="btn-sub-link" id="btn-lobby-rules">📜 Rules Guide</button>
+            <button class="btn-sub-link" id="btn-lobby-rules">📜 ${t("rulesGuide")}</button>
             <span class="dot-sep">•</span>
-            <button class="btn-sub-link" id="btn-lobby-history">📊 Match History</button>
+            <button class="btn-sub-link" id="btn-lobby-history">📊 ${t("matchHistory")}</button>
             <span class="dot-sep">•</span>
-            <button class="btn-sub-link" id="btn-lobby-switch-acc">🔄 Switch Account</button>
+            <button class="btn-sub-link" id="btn-lobby-switch-acc">🔄 ${t("switchAccount")}</button>
           </div>
         </div>
       </div>

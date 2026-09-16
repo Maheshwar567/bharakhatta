@@ -77,10 +77,13 @@ export class MultiplayerClient {
     this.onBetSynced = options.onBetSynced || (() => {});
     this.onSyncTimeoutPass = options.onSyncTimeoutPass || (() => {});
     this.onStart4pAIPair = options.onStart4pAIPair || (() => {});
+    this.onSyncGameState = options.onSyncGameState || (() => {});
+    this.onGate23Decision = options.onGate23Decision || (() => {});
     this.onError = options.onError || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
     this.currentBet = 250;
     this.gameMode = "2p";
+    this.peerConns = new Set();
   }
 
   isP2PPreferred() {
@@ -191,6 +194,14 @@ export class MultiplayerClient {
         this.onStart4pAIPair(msg);
         break;
 
+      case "SYNC_GAME_STATE":
+        this.onSyncGameState(msg.state);
+        break;
+
+      case "GATE_23_DECISION":
+        this.onGate23Decision(msg.decision);
+        break;
+
       case "ERROR":
         this.onError(msg.message);
         break;
@@ -241,12 +252,22 @@ export class MultiplayerClient {
 
     this.peer.on("connection", (conn) => {
       this.peerConn = conn;
+      this.peerConns.add(conn);
 
       conn.on("open", () => {
         // Connected to guest
       });
 
       conn.on("data", (data) => {
+        // Forward data to other peers if host
+        if (this.isHost && this.peerConns.size > 1) {
+          for (const otherConn of this.peerConns) {
+            if (otherConn !== conn && otherConn.open) {
+              otherConn.send(data);
+            }
+          }
+        }
+
         if (data.type === "JOIN_ROOM") {
           this.guestName = data.playerName || "Player 2";
           // In 4P mode, friend joins Team 1 as partner (Player 3), with Players 2 & 4 as System AI opposite pair
@@ -273,6 +294,7 @@ export class MultiplayerClient {
       });
 
       conn.on("close", () => {
+        this.peerConns.delete(conn);
         this.onPlayerLeft(2, [{ id: 1, team: 1, name: this.hostName }]);
       });
     });
@@ -411,9 +433,33 @@ export class MultiplayerClient {
     });
   }
 
+  sendGameState(state) {
+    if (!this.roomCode) return;
+    this.send({
+      type: "SYNC_GAME_STATE",
+      roomCode: this.roomCode,
+      state
+    });
+  }
+
+  sendGate23Decision(decision) {
+    if (!this.roomCode) return;
+    this.send({
+      type: "GATE_23_DECISION",
+      roomCode: this.roomCode,
+      decision
+    });
+  }
+
   send(data) {
-    if (this.mode === "p2p" && this.peerConn && this.peerConn.open) {
-      this.peerConn.send(data);
+    if (this.mode === "p2p") {
+      if (this.peerConns && this.peerConns.size > 0) {
+        for (const conn of this.peerConns) {
+          if (conn && conn.open) conn.send(data);
+        }
+      } else if (this.peerConn && this.peerConn.open) {
+        this.peerConn.send(data);
+      }
     } else if (this.ws && this.ws.readyState === 1) {
       this.ws.send(JSON.stringify(data));
     }
@@ -426,6 +472,12 @@ export class MultiplayerClient {
     this.isHost = false;
     this.connected = false;
 
+    if (this.peerConns) {
+      for (const conn of this.peerConns) {
+        try { conn.close(); } catch (_) {}
+      }
+      this.peerConns.clear();
+    }
     if (this.peerConn) {
       try { this.peerConn.close(); } catch (_) {}
       this.peerConn = null;

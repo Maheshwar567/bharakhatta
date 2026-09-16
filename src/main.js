@@ -18,10 +18,12 @@ import { userManager, computeNickName } from "./game/userManager.js";
 import { renderLoginModal } from "./components/LoginModal.js";
 import { renderProfileHistoryModal } from "./components/ProfileHistoryModal.js";
 import { renderExitConfirmModal, renderInactivityModal } from "./components/ExitModal.js";
+import { renderGatePromptModal } from "./components/GatePromptModal.js";
 import { renderLobbyView } from "./components/LobbyView.js";
 import { TurnTimer } from "./game/turnTimer.js";
 import { sounds } from "./audio/soundManager.js";
 import { haptics } from "./utils/haptics.js";
+import { t, getLanguage, toggleLanguage } from "./utils/i18n.js";
 
 class BharakhattaApp {
   constructor() {
@@ -31,6 +33,7 @@ class BharakhattaApp {
     this.mpModalOpen = false;
     this.chatOpen = false;
     this.betModalOpen = false;
+    this.gatePromptOpen = false;
     this.loginModalOpen = !userManager.isLoggedIn();
     this.inLobby = userManager.isLoggedIn();
     this.playerCount = 2; // 2 or 4 players
@@ -94,6 +97,8 @@ class BharakhattaApp {
       onBetSynced: (bet) => this.handleBetSynced(bet),
       onSyncTimeoutPass: (msg) => this.handleRemoteTimeoutPass(msg),
       onStart4pAIPair: (msg) => this.handleStart4pAIPair(msg),
+      onSyncGameState: (state) => this.handleRemoteGameState(state),
+      onGate23Decision: (decision) => this.handleRemoteGate23Decision(decision),
       onError: (msg) => {
         this.mpState.errorMsg = msg;
         this.render();
@@ -113,7 +118,8 @@ class BharakhattaApp {
         if (this.engine) this.render();
       },
       onLog: (entry) => this.addLog(entry),
-      onTurnChange: (player) => this.handleTurnChange(player)
+      onTurnChange: (player) => this.handleTurnChange(player),
+      onBothGatesOpen: () => this.handleBothGatesOpen()
     });
 
     this.bindGlobalKeys();
@@ -403,6 +409,9 @@ class BharakhattaApp {
     const roll = this.engine.roll();
     if (this.mpState.roomCode && roll) {
       this.mpClient.sendRoll(roll);
+      setTimeout(() => {
+        if (this.mpClient) this.mpClient.sendGameState(this.engine.getStateSnapshot());
+      }, 650);
     }
   }
 
@@ -416,6 +425,9 @@ class BharakhattaApp {
     this.engine.executeMove(move);
     if (this.mpState.roomCode) {
       this.mpClient.sendMove(move);
+      setTimeout(() => {
+        if (this.mpClient) this.mpClient.sendGameState(this.engine.getStateSnapshot());
+      }, 700);
     }
   }
 
@@ -432,11 +444,15 @@ class BharakhattaApp {
     wallet.placeBet(this.currentBet);
     this.matchPot = this.currentBet * 2;
 
-    this.engine.players = [
-      { id: 1, team: 1, name: "Player 1 (You)", avatar: "👑", isAI: false },
-      { id: 2, team: 2, name: "Player 2 (Friend)", avatar: "🦚", isAI: false }
+    this.engine.isMultiplayer = true;
+    this.engine.isHost = true;
+    const user = userManager.getCurrentUser();
+    const myName = user ? (user.nickName || user.name) : "Player 1";
+    const players = [
+      { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
+      { id: 2, team: 2, name: "Player 2 (Friend)", avatar: "🦚", color: "#27ae60", isAI: false }
     ];
-    this.engine.initGame();
+    this.engine.initGame(players);
     this.turnTimer.start();
 
     const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
@@ -461,11 +477,15 @@ class BharakhattaApp {
     // Deduct guest bet
     wallet.placeBet(this.currentBet);
 
-    this.engine.players = [
-      { id: 1, team: 1, name: "Player 1 (Friend)", avatar: "👑", isAI: false },
-      { id: 2, team: 2, name: "Player 2 (You)", avatar: "🦚", isAI: false }
+    this.engine.isMultiplayer = true;
+    this.engine.isHost = false;
+    const user = userManager.getCurrentUser();
+    const myName = user ? (user.nickName || user.name) : "Player 2";
+    const players = [
+      { id: 1, team: 1, name: "Player 1 (Friend)", avatar: "👑", color: "#e67e22", isAI: false },
+      { id: 2, team: 2, name: `${myName} (You)`, avatar: "🦚", color: "#27ae60", isAI: false }
     ];
-    this.engine.initGame();
+    this.engine.initGame(players);
     this.turnTimer.start();
 
     const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
@@ -479,6 +499,9 @@ class BharakhattaApp {
     this.engine.log(`🎉 ${player.name} connected! Both players paired. Match pot: 🪙${this.matchPot.toLocaleString()}`);
     sounds.playBonusRoll();
     this.turnTimer.reset();
+    if (this.mpState.isHost && this.mpClient) {
+      this.mpClient.sendGameState(this.engine.getStateSnapshot());
+    }
     this.render();
   }
 
@@ -507,6 +530,51 @@ class BharakhattaApp {
     // Force execute remote move directly on the authoritative coin instance
     this.engine.executeMove(move, true);
     this.turnTimer.reset();
+    this.render();
+  }
+
+  handleRemoteGameState(state) {
+    if (!state || !this.engine) return;
+    this.engine.applyStateSnapshot(state);
+    this.render();
+  }
+
+  handleBothGatesOpen() {
+    this.gatePromptOpen = true;
+    sounds.playBaaraTwelve();
+    this.render();
+  }
+
+  handleGate23Decision(decision) {
+    this.gatePromptOpen = false;
+    if (this.mpState.roomCode) {
+      this.mpClient.sendGate23Decision(decision);
+    }
+    if (decision === "continue") {
+      this.engine.log(`⚔️ Both teams unlocked Gate 23! Game continues toward 5/5 squad.`);
+      this.render();
+    } else if (decision === "restart") {
+      this.engine.log(`🔄 Restarting match by mutual agreement.`);
+      if (this.mpState.roomCode) {
+        this.mpClient.sendRestart();
+      }
+      this.engine.initGame();
+      this.turnTimer.start();
+      this.render();
+    }
+  }
+
+  handleRemoteGate23Decision(decision) {
+    this.gatePromptOpen = false;
+    if (decision === "continue") {
+      this.engine.log(`⚔️ Both teams unlocked Gate 23! Game continues toward 5/5 squad.`);
+      this.render();
+    } else if (decision === "restart") {
+      this.engine.log(`🔄 Opponent agreed to restart match from scratch.`);
+      this.engine.initGame();
+      this.turnTimer.start();
+      this.render();
+    }
   }
 
   handleRemoteRestart() {
@@ -603,6 +671,9 @@ class BharakhattaApp {
     if (this.mpModalOpen) {
       const roomLink = this.mpState.roomCode ? `${this.baseMobileUrl}?room=${this.mpState.roomCode}` : "";
       modalsHtml += renderMultiplayerModal(true, this.mpState, this.roomQrDataUrl, roomLink);
+    }
+    if (this.gatePromptOpen) {
+      modalsHtml += renderGatePromptModal(true);
     }
     if (this.chatOpen) {
       modalsHtml += renderChatDrawer(true, this.chatMessages, this.mpState.myPlayerId || 1);
@@ -1247,6 +1318,34 @@ class BharakhattaApp {
         this.inactivityModalOpen = false;
         this.turnTimer.stop();
         this.inLobby = true;
+        this.render();
+      };
+    }
+
+    // Dual Gate 23 Decision Modal
+    const btnGateContinue = document.getElementById("btn-gate-continue");
+    if (btnGateContinue) {
+      btnGateContinue.onclick = () => this.handleGate23Decision("continue");
+    }
+
+    const btnGateRestart = document.getElementById("btn-gate-restart");
+    if (btnGateRestart) {
+      btnGateRestart.onclick = () => this.handleGate23Decision("restart");
+    }
+
+    // Language Toggle
+    const btnToggleLang = document.getElementById("btn-toggle-lang");
+    if (btnToggleLang) {
+      btnToggleLang.onclick = () => {
+        toggleLanguage();
+        this.render();
+      };
+    }
+
+    const btnLobbyLang = document.getElementById("btn-lobby-lang-toggle");
+    if (btnLobbyLang) {
+      btnLobbyLang.onclick = () => {
+        toggleLanguage();
         this.render();
       };
     }

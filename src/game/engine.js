@@ -29,16 +29,27 @@ export class BharakhattaEngine {
     this.onStateChange = options.onStateChange || (() => {});
     this.onLog = options.onLog || (() => {});
     this.onTurnChange = options.onTurnChange || (() => {});
+    this.onBothGatesOpen = options.onBothGatesOpen || (() => {});
+    this.isMultiplayer = options.isMultiplayer || false;
+    this.isHost = options.isHost !== undefined ? options.isHost : true;
+    this.bothGatesPrompted = false;
 
     this.initGame();
   }
 
   initGame(customPlayers = null) {
+    this.bothGatesPrompted = false;
     // 2p Mode: Player 1 (Team 1) vs Player 2 (Team 2)
     // 4p Mode: P1 & P3 (Team 1) vs P2 & P4 (Team 2)
     if (customPlayers && Array.isArray(customPlayers) && customPlayers.length > 0) {
       this.players = customPlayers.map(p => ({ ...p }));
       this.gameMode = this.players.length >= 4 ? "4p" : "2p";
+    } else if (this.isMultiplayer) {
+      // In online multiplayer 2P, both players are human (never auto-roll!)
+      this.players = [
+        { id: 1, team: 1, name: "Player 1", avatar: "👑", color: "#e67e22", isAI: false },
+        { id: 2, team: 2, name: "Player 2", avatar: "🦚", color: "#27ae60", isAI: false }
+      ];
     } else if (this.gameMode === "4p") {
       this.players = [
         { id: 1, team: 1, name: "Player 1", avatar: "👑", color: "#e67e22", isAI: false },
@@ -361,19 +372,39 @@ export class BharakhattaEngine {
             });
 
             this.log(`⚡ Katta strike earned ${player.name} a Bonus Turn! Inside 5/5 ring unlocked.`);
+
+            // Dual Gate 23 Unlock Rule: when both teams have made at least 1 kill
+            if (this.team1Kills >= 1 && this.team2Kills >= 1 && !this.bothGatesPrompted) {
+              this.bothGatesPrompted = true;
+              this.log(`⚔️ Both Home 1 and Home 2 have unlocked Gate 23!`);
+              if (this.onBothGatesOpen) {
+                this.onBothGatesOpen();
+              }
+            }
           }
         }
 
-        // Check if game won
-        if (this.checkWinCondition(teamId)) {
+        // Check if game won:
+        // 1. Traditional: all 6 coins reached Center Sanctum
+        // 2. Squad Escape: all 6 coins safely entered inside 5/5 squad (zero coins left in outer 7/7 or jail)
+        const allInSanctum = this.checkWinCondition(teamId);
+        const allIn5x5Squad = this.checkSquad5x5Win(teamId);
+
+        if (allInSanctum || allIn5x5Squad) {
+          const reason = allIn5x5Squad && !allInSanctum ? "SQUAD_5X5_COMPLETE" : "CENTER_SANCTUM";
           this.winner = {
             team: teamId,
             player: player,
+            reason,
             stats: { ...this.stats, durationSec: Math.round((Date.now() - this.stats.startTime) / 1000) }
           };
           this.status = GAME_STATUS.GAME_OVER;
           sounds.playVictory();
-          this.log(`🏆 GAME OVER! Team ${teamId} has won the game of Bharakhatta! Congratulations!`);
+          if (reason === "SQUAD_5X5_COMPLETE") {
+            this.log(`🏆 ALL 6 COINS ENTERED 5/5 SQUAD! Team ${teamId} has no coins left in outer 7/7 zone! Team ${teamId} Wins!`);
+          } else {
+            this.log(`🏆 GAME OVER! Team ${teamId} has won the game of Bharakhatta! Congratulations!`);
+          }
           this.emitChange();
           return;
         }
@@ -503,9 +534,22 @@ export class BharakhattaEngine {
     return finishedCoins.length === 6;
   }
 
+  // 6 out of 6 enter 5/5 Squad win condition:
+  // All 6 coins of the team have entered step 24+ or finished in center sanctum,
+  // leaving 0 coins in jail and 0 coins in outer 7/7 perimeter track for opponent to kill!
+  checkSquad5x5Win(teamId) {
+    const coins = this.getTeamCoins(teamId);
+    if (coins.length !== 6) return false;
+    return coins.every(c => !c.inJail && (c.stepIndex >= 24 || c.isFinished));
+  }
+
   checkAITurn() {
     const player = this.getCurrentPlayer();
+    // Human players NEVER auto-roll!
     if (!player.isAI || this.status === GAME_STATUS.GAME_OVER) return;
+
+    // In multiplayer: if not host, host will broadcast AI action
+    if (this.isMultiplayer && !this.isHost) return;
 
     if (this.status === GAME_STATUS.WAITING_FOR_ROLL) {
       setTimeout(() => {
@@ -558,5 +602,32 @@ export class BharakhattaEngine {
       team2Kills: this.team2Kills,
       stats: { ...this.stats }
     };
+  }
+
+  applyStateSnapshot(snapshot) {
+    if (!snapshot) return;
+    this.status = snapshot.status;
+    this.gameMode = snapshot.gameMode || this.gameMode;
+    if (snapshot.players && Array.isArray(snapshot.players)) {
+      this.players = snapshot.players.map(p => ({ ...p }));
+    }
+    if (snapshot.currentPlayer) {
+      const idx = this.players.findIndex(p => p.id === snapshot.currentPlayer.id);
+      if (idx !== -1) {
+        this.currentPlayerIndex = idx;
+      }
+    }
+    this.currentRoll = snapshot.currentRoll || null;
+    if (snapshot.coins && Array.isArray(snapshot.coins)) {
+      this.coins = snapshot.coins.map(c => ({ ...c }));
+    }
+    this.validMoves = snapshot.validMoves || [];
+    this.winner = snapshot.winner || null;
+    if (snapshot.team1Kills !== undefined) this.team1Kills = snapshot.team1Kills;
+    if (snapshot.team2Kills !== undefined) this.team2Kills = snapshot.team2Kills;
+    if (snapshot.stats) {
+      this.stats = { ...snapshot.stats };
+    }
+    this.emitChange();
   }
 }

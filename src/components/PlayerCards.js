@@ -1,4 +1,5 @@
 // Compact Header & Player status for Bharakhatta
+import { t, getLanguage } from "../utils/i18n.js";
 
 export function renderHeader(gameState, soundMuted, mpState = null, options = {}) {
   const { gameMode, diceMode, status, currentPlayer, winner } = gameState;
@@ -8,6 +9,7 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
   const matchPot = options.matchPot || 0;
   const timeLeft = options.timeLeft !== undefined ? options.timeLeft : 30;
   const unreadChatCount = options.unreadChatCount || 0;
+  const currentLang = getLanguage();
 
   let timerColorClass = "timer-normal";
   if (timeLeft <= 5) timerColorClass = "timer-urgent";
@@ -19,25 +21,25 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
         <div class="brand-logo">
           <span class="logo-icon">🐚</span>
           <div>
-            <h1 class="brand-title">BHARAKHATTA</h1>
-            <span class="brand-subtitle">బాఱఖట్టా</span>
+            <h1 class="brand-title">${t("appTitle")}</h1>
+            <span class="brand-subtitle">${currentLang === "en" ? "బాఱఖట్టా" : "Bharakhatta"}</span>
           </div>
         </div>
 
         <!-- Formatted Top Line: Game Coins - Login Name (Nick) - Pot Coins -->
         <div class="header-economy-bar" id="game-header-bar">
-          <div class="econ-pill econ-wallet" id="btn-open-wallet" title="Your Game Coins (Click to view wallet / bet)">
+          <div class="econ-pill econ-wallet" id="btn-open-wallet" title="${t("gameCoins")}">
             <span class="econ-icon">🪙</span>
-            <span class="econ-label">Game Coins:</span>
+            <span class="econ-label">${t("gameCoins")}:</span>
             <strong class="econ-val">${walletCoins.toLocaleString()}</strong>
           </div>
 
           <span class="econ-sep">•</span>
 
           ${options.user ? `
-            <div class="econ-pill econ-user" id="btn-open-profile" title="Player Profile & Lifetime History">
+            <div class="econ-pill econ-user" id="btn-open-profile" title="${t("name")}">
               <span class="econ-icon">👤</span>
-              <span class="econ-label">Name:</span>
+              <span class="econ-label">${t("name")}:</span>
               <strong class="econ-val econ-nick">${options.user.nickName || options.user.name}</strong>
             </div>
           ` : `
@@ -48,18 +50,18 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
 
           <span class="econ-sep">•</span>
 
-          <div class="econ-pill econ-pot" id="btn-open-bet" title="Total Match Pot to Win">
+          <div class="econ-pill econ-pot" id="btn-open-bet" title="${t("potCoins")}">
             <span class="econ-icon">🏆</span>
-            <span class="econ-label">Pot Coins:</span>
+            <span class="econ-label">${t("potCoins")}:</span>
             <strong class="econ-val">🪙${matchPot.toLocaleString()}</strong>
           </div>
         </div>
 
         <!-- Room Indicator -->
         ${inOnlineRoom ? `
-          <div class="room-indicator-pill" id="btn-open-mp-badge" title="Room #${mpState.roomCode}">
+          <div class="room-indicator-pill" id="btn-open-mp-badge" title="${t("boardNumber")}: #${mpState.roomCode}">
             <span class="live-dot">${isPaired ? "🟢" : "⏳"}</span>
-            <span>Room: <strong>#${mpState.roomCode}</strong></span>
+            <span>${t("room")}: <strong>#${mpState.roomCode}</strong></span>
           </div>
         ` : ""}
       </div>
@@ -71,20 +73,25 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
           <span class="timer-seconds">${timeLeft}s</span>
         </div>
 
+        <!-- Language Toggle Button: English / Telugu -->
+        <button id="btn-toggle-lang" class="btn-icon btn-lang-toggle" title="Switch Language / భాష మార్చండి" style="font-weight: 700; color: #f1c40f; border: 1px solid rgba(241,196,15,0.4); background: rgba(241,196,15,0.12);">
+          ${currentLang === "en" ? "🌐 తెలుగు" : "🌐 English"}
+        </button>
+
         <!-- In-Game Chat Button (Always available for smilies & text) -->
-        <button id="btn-open-chat" class="btn-icon btn-chat-glow" title="In-Game Live Chat & Smilies">
-          💬 Chat ${unreadChatCount > 0 ? `<span class="chat-badge">${unreadChatCount}</span>` : ""}
+        <button id="btn-open-chat" class="btn-icon btn-chat-glow" title="${t("chat")}">
+          💬 ${t("chat")} ${unreadChatCount > 0 ? `<span class="chat-badge">${unreadChatCount}</span>` : ""}
         </button>
 
         <!-- Only show 'Play with Friend' when NOT yet paired -->
         ${!isPaired ? `
-          <button id="btn-open-multiplayer" class="btn-icon btn-mp-glow" title="Play with a friend on another mobile phone">
-            👥 Play with Friend
+          <button id="btn-open-multiplayer" class="btn-icon btn-mp-glow" title="${t("playWithFriend")}">
+            👥 ${t("playWithFriend")}
           </button>
         ` : ""}
 
-        <button id="btn-open-bet" class="btn-icon btn-bet-chip" title="Match Coin Stake / Bet">
-          🪙 Bet
+        <button id="btn-open-bet" class="btn-icon btn-bet-chip" title="${t("bet")}">
+          🪙 ${t("bet")}
         </button>
 
         <button id="btn-toggle-dice" class="btn-toggle-mode" title="Switch between 6 Guvvalu and Standard Die">
@@ -95,13 +102,13 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
           ${soundMuted ? "🔇" : "🔊"}
         </button>
 
-        <button id="btn-open-rules" class="btn-icon" title="Game Rules & Guide">
+        <button id="btn-open-rules" class="btn-icon" title="${t("rules")}">
           📜
         </button>
 
         <!-- Exit Match Button -->
-        <button id="btn-open-exit" class="btn-icon btn-exit-glow" title="Exit Match">
-          🚪 Exit
+        <button id="btn-open-exit" class="btn-icon btn-exit-glow" title="${t("exit")}">
+          🚪 ${t("exit")}
         </button>
       </div>
     </header>

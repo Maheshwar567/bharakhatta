@@ -16,6 +16,7 @@ import { UserManager, computeNickName } from "../src/game/userManager.js";
 import { wallet } from "../src/game/wallet.js";
 import { generateUniqueBoardNumber, normalizeBoardNumber } from "../src/game/multiplayerClient.js";
 import { renderCuppedPalm, renderCowrieArea } from "../src/components/CowrieShellsView.js";
+import { t, getLanguage, setLanguage, toggleLanguage } from "../src/utils/i18n.js";
 
 function runTests() {
   console.log("=== BHARAKHATTA AUTOMATED TEST SUITE ===\n");
@@ -319,6 +320,138 @@ function runTests() {
   const shakingPalmHtml = renderCuppedPalm(testShells, true, false, true);
   assert(shakingPalmHtml.includes("hands-shaking-toss"), "Shaking animation active during roll toss");
   assert(shakingPalmHtml.includes("shells-flying-out"), "Shells fly out animation active during toss");
+
+  // 14. Test Always 2 Homes Rule (2P and 4P modes)
+  console.log("\n--- Test 14: Always 2 Homes Rule (H1 Bottom & H2 Top) ---");
+  const p1Path = getPlayerPath(1, "spiral");
+  const p2Path = getPlayerPath(2, "spiral");
+  assert(p1Path[0].r === 6 && p1Path[0].c === 3, "Team 1 starts from Home 1 (Bottom, r=6, c=3)");
+  assert(p2Path[0].r === 0 && p2Path[0].c === 3, "Team 2 starts from Home 2 (Top, r=0, c=3)");
+
+  // In 4P mode, P1 & P3 are Team 1 (Home 1), P2 & P4 are Team 2 (Home 2)
+  const test4pEngine = new BharakhattaEngine({ gameMode: "4p" });
+  assert(test4pEngine.players[0].team === 1, "4P: Player 1 belongs to Team 1 (Home 1)");
+  assert(test4pEngine.players[1].team === 2, "4P: Player 2 belongs to Team 2 (Home 2)");
+  assert(test4pEngine.players[2].team === 1, "4P: Player 3 belongs to Team 1 (Home 1)");
+  assert(test4pEngine.players[3].team === 2, "4P: Player 4 belongs to Team 2 (Home 2)");
+  assert(new Set(test4pEngine.players.map(p => p.team)).size === 2, "Exactly 2 homes / teams in 4-player game");
+
+  // 15. Test Dual Gate 23 Unlock Callback
+  console.log("\n--- Test 15: Dual Gate 23 Unlock Callback ---");
+  let gatePromptTriggered = false;
+  const dualGateEngine = new BharakhattaEngine({
+    gameMode: "2p",
+    onBothGatesOpen: () => { gatePromptTriggered = true; }
+  });
+  assert(dualGateEngine.bothGatesPrompted === false, "Dual gate prompt flag initially false");
+
+  // Team 1 makes 1 kill
+  dualGateEngine.team1Kills = 1;
+  assert(!gatePromptTriggered, "Gate prompt does not trigger when only Team 1 has killed");
+
+  // Team 2 makes 1 kill
+  dualGateEngine.currentPlayerIndex = 1;
+  const victimT1 = dualGateEngine.coins.find(c => c.team === 1 && c.num === 1);
+  victimT1.inJail = false;
+  victimT1.coord = { r: 1, c: 3 }; // square on path
+  victimT1.stepIndex = 12;
+
+  const killerT2 = dualGateEngine.coins.find(c => c.team === 2 && c.num === 1);
+  killerT2.inJail = false;
+  killerT2.stepIndex = 0;
+  killerT2.coord = { r: 0, c: 3 };
+
+  // Execute capture move by Team 2
+  const captureMove = {
+    type: "MOVE_COIN",
+    coin: killerT2,
+    fromStep: 0,
+    toStep: 1,
+    targetCoord: { r: 1, c: 3 },
+    isCapture: true,
+    isSafe: false
+  };
+  dualGateEngine.executeMove(captureMove, true, true);
+  assert(dualGateEngine.team1Kills >= 1 && dualGateEngine.team2Kills >= 1, "Both teams have >= 1 kill");
+  assert(gatePromptTriggered === true, "onBothGatesOpen callback fired when both teams unlocked Gate 23!");
+  assert(dualGateEngine.bothGatesPrompted === true, "bothGatesPrompted flag marked true");
+
+  // 16. Test 6/6 Coins Enter 5/5 Squad Instant Victory
+  console.log("\n--- Test 16: 6/6 Coins Enter 5/5 Squad Instant Win ---");
+  const squadEngine = new BharakhattaEngine({ gameMode: "2p" });
+  assert(squadEngine.checkSquad5x5Win(1) === false, "Initially Team 1 has not achieved 5/5 squad win");
+
+  // Move all 6 coins of Team 1 into step 24+ (inside 5/5 squad)
+  const t1Coins = squadEngine.getTeamCoins(1);
+  t1Coins.forEach((coin, idx) => {
+    coin.inJail = false;
+    coin.stepIndex = 24 + idx; // Steps 24, 25, 26, 27, 28, 29 (all in 5/5 squad)
+    coin.coord = { ...spiralT1[coin.stepIndex] };
+  });
+
+  assert(squadEngine.checkSquad5x5Win(1) === true, "checkSquad5x5Win returns true when all 6 coins are at step >= 24");
+  
+  // Test executeMove triggering instant win for SQUAD_5X5_COMPLETE
+  squadEngine.status = GAME_STATUS.WAITING_FOR_MOVE;
+  const sampleMove = {
+    type: "MOVE_COIN",
+    coin: t1Coins[0],
+    fromStep: 24,
+    toStep: 25,
+    targetCoord: { ...spiralT1[25] },
+    isCapture: false,
+    isSafe: false
+  };
+  squadEngine.executeMove(sampleMove, true, true);
+  assert(squadEngine.winner !== null, "Winner declared upon 6/6 coins entering 5/5 squad");
+  assert(squadEngine.winner.team === 1, "Team 1 declared winner");
+  assert(squadEngine.winner.reason === "SQUAD_5X5_COMPLETE", "Winner reason is SQUAD_5X5_COMPLETE");
+  assert(squadEngine.status === GAME_STATUS.GAME_OVER, "Game status is GAME_OVER");
+
+  // 17. Test Multiplayer AI Disable (Player 2 Never Auto-rolls)
+  console.log("\n--- Test 17: Multiplayer AI Disable (Zero Auto-rolls for Humans) ---");
+  const mpEngine = new BharakhattaEngine({ isMultiplayer: true, isHost: false });
+  assert(mpEngine.isMultiplayer === true, "Multiplayer mode flag is true");
+  assert(mpEngine.players[0].isAI === false, "Player 1 isAI is false in multiplayer");
+  assert(mpEngine.players[1].isAI === false, "Player 2 isAI is strictly FALSE in multiplayer (never auto-rolls!)");
+
+  // Verify checkAITurn returns immediately for human player
+  mpEngine.currentPlayerIndex = 1; // Player 2's turn
+  assert(mpEngine.getCurrentPlayer().isAI === false, "Current player is human");
+  mpEngine.status = GAME_STATUS.WAITING_FOR_ROLL;
+  mpEngine.checkAITurn();
+  assert(mpEngine.status === GAME_STATUS.WAITING_FOR_ROLL, "Player 2 turn does not auto-roll; stays waiting for user action");
+
+  // Test applyStateSnapshot
+  console.log("\n--- Test 17b: Authoritative State Snapshot & Synchronization ---");
+  const snap = mpEngine.getStateSnapshot();
+  assert(snap.status === GAME_STATUS.WAITING_FOR_ROLL, "Snapshot captures game status");
+  assert(snap.coins.length === 12, "Snapshot captures 12 coins");
+  
+  const clientEngine = new BharakhattaEngine({ isMultiplayer: true, isHost: false });
+  snap.team1Kills = 2;
+  snap.team2Kills = 1;
+  clientEngine.applyStateSnapshot(snap);
+  assert(clientEngine.team1Kills === 2 && clientEngine.team2Kills === 1, "applyStateSnapshot accurately synchronizes kills and board state");
+
+  // 18. Test i18n Bilingual Support
+  console.log("\n--- Test 18: Bilingual Localization (English & Telugu) ---");
+  setLanguage("en");
+  assert(getLanguage() === "en", "Language set to English");
+  assert(t("appTitle") === "BHARAKHATTA", "English app title is BHARAKHATTA");
+  assert(t("twoPlayers") === "2 Players", "English 2 players label");
+  assert(t("gate23Title").includes("Both Homes Unlocked Gate 23"), "English dual gate title");
+  assert(t("winReasonSquad", { team: 1 }).includes("ALL 6 COINS ENTERED 5/5 SQUAD"), "English squad win with param substitution");
+
+  toggleLanguage();
+  assert(getLanguage() === "te", "Language toggled to Telugu");
+  assert(t("appTitle") === "బాఱఖట్టా", "Telugu app title is బాఱఖట్టా");
+  assert(t("twoPlayers") === "2 గురు ఆటగాళ్ళు", "Telugu 2 players label");
+  assert(t("gate23Title").includes("రెండు హోమ్‌ల గేట్ 23"), "Telugu dual gate title");
+  assert(t("winReasonSquad", { team: 1 }).includes("6 గువ్వలూ 5/5 స్క్వాడ్‌లోకి చేరాయి"), "Telugu squad win description");
+
+  toggleLanguage();
+  assert(getLanguage() === "en", "Language toggles back to English");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);
