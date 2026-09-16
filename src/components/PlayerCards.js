@@ -17,98 +17,97 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
 
   return `
     <header class="app-header">
-      <div class="header-brand">
-        <div class="brand-logo">
+      <!-- Top Row: Logo, Live Timer, and Prominent Quit Button -->
+      <div class="header-top-row">
+        <div class="header-brand">
           <span class="logo-icon">🐚</span>
-          <div>
+          <div class="brand-text-col">
             <h1 class="brand-title">${t("appTitle")}</h1>
             <span class="brand-subtitle">${currentLang === "en" ? "బాఱఖట్టా" : "Bharakhatta"}</span>
           </div>
         </div>
 
-        <!-- Formatted Top Line: Game Coins - Login Name (Nick) - Pot Coins -->
-        <div class="header-economy-bar" id="game-header-bar">
-          <div class="econ-pill econ-wallet" id="btn-open-wallet" title="${t("gameCoins")}">
-            <span class="econ-icon">🪙</span>
-            <span class="econ-label">${t("gameCoins")}:</span>
-            <strong class="econ-val">${walletCoins.toLocaleString()}</strong>
+        <!-- 30s Turn Timer -->
+        <div class="turn-timer-pill ${timerColorClass}" title="30-Second Turn Timer">
+          <span class="timer-icon">⏳</span>
+          <span class="timer-seconds">${timeLeft}s</span>
+        </div>
+
+        <!-- Prominent ALWAYS VISIBLE Quit Match Button -->
+        <button id="btn-open-exit" class="btn-quit-game-header" title="${t("exit")}">
+          🚪 ${t("exit")}
+        </button>
+      </div>
+
+      <!-- Formatted Middle Line: Game Coins - Nick Name - Pot Coins -->
+      <div class="header-economy-bar" id="game-header-bar">
+        <div class="econ-pill econ-wallet" id="btn-open-wallet" title="${t("gameCoins")}">
+          <span class="econ-icon">🪙</span>
+          <span class="econ-label">${t("gameCoins")}:</span>
+          <strong class="econ-val">${walletCoins.toLocaleString()}</strong>
+        </div>
+
+        <span class="econ-sep">•</span>
+
+        ${options.user ? `
+          <div class="econ-pill econ-user" id="btn-open-profile" title="${t("name")}">
+            <span class="econ-icon">👤</span>
+            <span class="econ-label">${t("name")}:</span>
+            <strong class="econ-val econ-nick">${options.user.nickName || options.user.name}</strong>
           </div>
+        ` : `
+          <button class="btn-login-header" id="btn-header-login" title="Login with Mobile Number">
+            📱 Login
+          </button>
+        `}
 
-          <span class="econ-sep">•</span>
+        <span class="econ-sep">•</span>
 
-          ${options.user ? `
-            <div class="econ-pill econ-user" id="btn-open-profile" title="${t("name")}">
-              <span class="econ-icon">👤</span>
-              <span class="econ-label">${t("name")}:</span>
-              <strong class="econ-val econ-nick">${options.user.nickName || options.user.name}</strong>
-            </div>
-          ` : `
-            <button class="btn-login-header" id="btn-header-login" title="Login with Mobile Number">
-              📱 Login
-            </button>
-          `}
-
-          <span class="econ-sep">•</span>
-
-          <div class="econ-pill econ-pot" id="btn-open-bet" title="${t("potCoins")}">
-            <span class="econ-icon">🏆</span>
-            <span class="econ-label">${t("potCoins")}:</span>
-            <strong class="econ-val">🪙${matchPot.toLocaleString()}</strong>
-          </div>
+        <div class="econ-pill econ-pot" id="btn-open-bet" title="${t("potCoins")}">
+          <span class="econ-icon">🏆</span>
+          <span class="econ-label">${t("potCoins")}:</span>
+          <strong class="econ-val">🪙${matchPot.toLocaleString()}</strong>
         </div>
 
         <!-- Room Indicator -->
         ${inOnlineRoom ? `
           <div class="room-indicator-pill" id="btn-open-mp-badge" title="${t("boardNumber")}: #${mpState.roomCode}">
             <span class="live-dot">${isPaired ? "🟢" : "⏳"}</span>
-            <span>${t("room")}: <strong>#${mpState.roomCode}</strong></span>
+            <span>Table: <strong>#${mpState.roomCode}</strong></span>
           </div>
         ` : ""}
       </div>
 
+      <!-- Quick Action Controls -->
       <div class="header-controls">
-        <!-- 30s Turn Timer Pill -->
-        <div class="turn-timer-pill ${timerColorClass}" title="30-Second Turn Timer">
-          <span class="timer-icon">⏳</span>
-          <span class="timer-seconds">${timeLeft}s</span>
-        </div>
-
-        <!-- Language Toggle Button: English / Telugu -->
-        <button id="btn-toggle-lang" class="btn-icon btn-lang-toggle" title="Switch Language / భాష మార్చండి" style="font-weight: 700; color: #f1c40f; border: 1px solid rgba(241,196,15,0.4); background: rgba(241,196,15,0.12);">
-          ${currentLang === "en" ? "🌐 తెలుగు" : "🌐 English"}
-        </button>
-
-        <!-- In-Game Chat Button (Always available for smilies & text) -->
+        <!-- In-Game Chat Button -->
         <button id="btn-open-chat" class="btn-icon btn-chat-glow" title="${t("chat")}">
           💬 ${t("chat")} ${unreadChatCount > 0 ? `<span class="chat-badge">${unreadChatCount}</span>` : ""}
         </button>
 
-        <!-- Only show 'Play with Friend' when NOT yet paired -->
-        ${!isPaired ? `
-          <button id="btn-open-multiplayer" class="btn-icon btn-mp-glow" title="${t("playWithFriend")}">
-            👥 ${t("playWithFriend")}
-          </button>
-        ` : ""}
+        <!-- Friends Hub Button -->
+        <button id="btn-header-friends" class="btn-icon btn-friends-glow" title="Friends & Rooms">
+          👥 Friends
+        </button>
 
+        <!-- Bet Adjust -->
         <button id="btn-open-bet" class="btn-icon btn-bet-chip" title="${t("bet")}">
           🪙 ${t("bet")}
         </button>
 
-        <button id="btn-toggle-dice" class="btn-toggle-mode" title="Switch between 6 Guvvalu and Standard Die">
-          ${diceMode === "cowries" ? "🐚 Guvvalu" : "🎲 Die"}
+        <!-- Language Toggle -->
+        <button id="btn-toggle-lang" class="btn-icon btn-lang-toggle" title="Switch Language / భాష మార్చండి">
+          ${currentLang === "en" ? "🌐 తెలుగు" : "🌐 English"}
         </button>
 
+        <!-- Sound Toggle -->
         <button id="btn-toggle-sound" class="btn-icon ${soundMuted ? "btn-muted" : ""}" title="Toggle Sound">
           ${soundMuted ? "🔇" : "🔊"}
         </button>
 
+        <!-- Rules -->
         <button id="btn-open-rules" class="btn-icon" title="${t("rules")}">
           📜
-        </button>
-
-        <!-- Exit Match Button -->
-        <button id="btn-open-exit" class="btn-icon btn-exit-glow" title="${t("exit")}">
-          🚪 ${t("exit")}
         </button>
       </div>
     </header>

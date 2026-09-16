@@ -29,7 +29,13 @@ export function renderLobbyView(options = {}) {
               <span class="lobby-subtitle">${t("appSubtitle")}</span>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Hourly Free Reward Button -->
+            <button class="btn-hourly-reward-lobby ${options.hourlyRewardStatus?.canClaim ? 'reward-claim-glow' : 'reward-wait'}" id="btn-lobby-hourly-reward" title="Claim 500 Free Coins every hour!">
+              <span>🎁</span>
+              <span>${options.hourlyRewardStatus?.canClaim ? 'Free 500🪙' : (Math.floor((options.hourlyRewardStatus?.secondsLeft || 0) / 60) + 'm')}</span>
+            </button>
+
             <button class="btn-icon btn-lang-toggle" id="btn-lobby-lang-toggle" title="Switch Language / భాష మార్చండి" style="font-weight: 700; color: #f1c40f; border: 1px solid rgba(241,196,15,0.4); background: rgba(241,196,15,0.12); padding: 6px 10px; border-radius: 20px; cursor: pointer;">
               ${currentLang === "en" ? "🌐 తెలుగు" : "🌐 English"}
             </button>

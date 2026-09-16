@@ -4,6 +4,50 @@
 import PeerModule from "peerjs";
 const Peer = PeerModule.Peer || PeerModule.default || PeerModule;
 
+// Guaranteed Non-Repeating 4-Digit Table Code Generator
+// Generates unique 4-digit table codes (e.g. 4821) that never repeat in match history
+export function generateUnique4DigitTableCode() {
+  let used = [];
+  try {
+    if (typeof localStorage !== "undefined") {
+      used = JSON.parse(localStorage.getItem("bk_used_4digit_codes") || "[]");
+    }
+  } catch (_) {}
+
+  let seq = 1;
+  try {
+    if (typeof localStorage !== "undefined") {
+      const saved = localStorage.getItem("bk_4digit_seq");
+      if (saved) seq = parseInt(saved, 10) + 1;
+    }
+  } catch (_) {}
+
+  let code = "";
+  for (let attempt = 0; attempt < 9000; attempt++) {
+    const candidate = (((seq + attempt) * 3137 + 1729) % 9000) + 1000;
+    const str = String(candidate);
+    if (!used.includes(str)) {
+      code = str;
+      break;
+    }
+  }
+
+  if (!code) {
+    code = String(Math.floor(1000 + Math.random() * 9000));
+  }
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      used.push(code);
+      if (used.length > 8500) used = used.slice(-2000);
+      localStorage.setItem("bk_used_4digit_codes", JSON.stringify(used));
+      localStorage.setItem("bk_4digit_seq", String(seq + 1));
+    }
+  } catch (_) {}
+
+  return code;
+}
+
 // Guaranteed Non-Repeating Board Number Generator
 // Generates persistent IDs like BK-260915-101-482 that never repeat in match history
 export function generateUniqueBoardNumber() {
@@ -15,11 +59,13 @@ export function generateUniqueBoardNumber() {
 
   let seq = 101;
   try {
-    const savedSeq = localStorage.getItem("bk_board_seq");
-    if (savedSeq) {
-      seq = parseInt(savedSeq, 10) + 1;
+    if (typeof localStorage !== "undefined") {
+      const savedSeq = localStorage.getItem("bk_board_seq");
+      if (savedSeq) {
+        seq = parseInt(savedSeq, 10) + 1;
+      }
+      localStorage.setItem("bk_board_seq", String(seq));
     }
-    localStorage.setItem("bk_board_seq", String(seq));
   } catch (_) {
     seq = Math.floor(100 + Math.random() * 900);
   }
@@ -28,16 +74,18 @@ export function generateUniqueBoardNumber() {
   let boardNumber = `${datePrefix}-${seq}-${entropy}`;
 
   try {
-    let used = JSON.parse(localStorage.getItem("bk_used_board_numbers") || "[]");
-    while (used.includes(boardNumber)) {
-      seq++;
-      entropy = Math.floor(100 + Math.random() * 900);
-      boardNumber = `${datePrefix}-${seq}-${entropy}`;
+    if (typeof localStorage !== "undefined") {
+      let used = JSON.parse(localStorage.getItem("bk_used_board_numbers") || "[]");
+      while (used.includes(boardNumber)) {
+        seq++;
+        entropy = Math.floor(100 + Math.random() * 900);
+        boardNumber = `${datePrefix}-${seq}-${entropy}`;
+      }
+      used.push(boardNumber);
+      if (used.length > 1000) used = used.slice(-1000);
+      localStorage.setItem("bk_used_board_numbers", JSON.stringify(used));
+      localStorage.setItem("bk_board_seq", String(seq));
     }
-    used.push(boardNumber);
-    if (used.length > 1000) used = used.slice(-1000);
-    localStorage.setItem("bk_used_board_numbers", JSON.stringify(used));
-    localStorage.setItem("bk_board_seq", String(seq));
   } catch (_) {}
 
   return boardNumber;
@@ -45,7 +93,12 @@ export function generateUniqueBoardNumber() {
 
 export function normalizeBoardNumber(rawCode) {
   if (!rawCode) return "";
-  let clean = rawCode.trim().toUpperCase().replace(/\s+/g, "");
+  let clean = rawCode.toString().trim().toUpperCase().replace(/\s+/g, "");
+  // If user entered 4 digits or BK- followed by 4 digits
+  const fourDigitMatch = clean.match(/^(?:BK-?)?(\d{4})$/);
+  if (fourDigitMatch) {
+    return fourDigitMatch[1];
+  }
   if (!clean.startsWith("BK-") && !clean.startsWith("BK")) {
     clean = `BK-${clean}`;
   }
@@ -208,7 +261,7 @@ export class MultiplayerClient {
     }
   }
 
-  async createRoom(mode = "2p", playerName = "Player 1") {
+  async createRoom(mode = "2p", playerName = "Player 1", customCode = null) {
     this.hostName = playerName;
     this.gameMode = mode;
 
@@ -216,16 +269,16 @@ export class MultiplayerClient {
     if (!this.isP2PPreferred()) {
       try {
         await this.connectWS();
-        this.send({ type: "CREATE_ROOM", mode, playerName });
+        this.send({ type: "CREATE_ROOM", mode, playerName, roomCode: customCode });
         return;
       } catch (e) {
         console.log("WS failed, switching to P2P WebRTC:", e);
       }
     }
 
-    // WebRTC P2P Mode via PeerJS with Guaranteed Non-Repeating Board Number
+    // WebRTC P2P Mode via PeerJS with Guaranteed Non-Repeating 4-Digit Board Number
     this.mode = "p2p";
-    const roomCode = generateUniqueBoardNumber();
+    const roomCode = customCode ? normalizeBoardNumber(customCode) : generateUnique4DigitTableCode();
     const peerId = `bk-board-${roomCode.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
 
     if (this.peer) {

@@ -39,6 +39,15 @@ export function computeNickName(fullName, customNickName) {
   return parts.map(p => p[0].toUpperCase()).join("");
 }
 
+export const STARTER_FRIENDS = [
+  { id: "f_1", mobile: "9876543210", nickName: "Aatikur", fullName: "Aatikur Rahman", avatar: "👤", level: 33 },
+  { id: "f_2", mobile: "9876543211", nickName: "sumongamingf9c", fullName: "Sumon Gaming", avatar: "🕵️", level: 34 },
+  { id: "f_3", mobile: "9876543212", nickName: "sarker", fullName: "Sarker Babu", avatar: "😎", level: 64 },
+  { id: "f_4", mobile: "9876543213", nickName: "king", fullName: "King Kumar", avatar: "🕶️", level: 54 },
+  { id: "f_5", mobile: "9876543214", nickName: "jogi", fullName: "Jogi Reddy", avatar: "🏯", level: 54 },
+  { id: "f_6", mobile: "9876543215", nickName: "Sk", fullName: "SK Nayak", avatar: "🤵", level: 68 }
+];
+
 export class UserManager {
   constructor() {
     this.currentUser = null;
@@ -84,6 +93,12 @@ export class UserManager {
           parsed.nickName = computeNickName(parsed.fullName || parsed.name || "", "");
         }
         parsed.name = parsed.nickName;
+        if (!Array.isArray(parsed.friends)) {
+          parsed.friends = [...STARTER_FRIENDS];
+        }
+        if (typeof parsed.lastHourlyRewardClaim !== "number") {
+          parsed.lastHourlyRewardClaim = 0;
+        }
         return parsed;
       }
     } catch (e) {
@@ -125,6 +140,9 @@ export class UserManager {
         existing.nickName = nickName;
         existing.name = nickName;
       }
+      if (!Array.isArray(existing.friends)) {
+        existing.friends = [...STARTER_FRIENDS];
+      }
       this.currentUser = existing;
       storage.setItem(CURRENT_USER_KEY, mobile);
 
@@ -154,7 +172,9 @@ export class UserManager {
       gamesWon: 0,
       totalKills: 0,
       totalCoinsWon: 0,
-      matchHistory: []
+      matchHistory: [],
+      friends: [...STARTER_FRIENDS],
+      lastHourlyRewardClaim: 0
     };
 
     this.currentUser = newUser;
@@ -192,11 +212,12 @@ export class UserManager {
     return this.currentUser;
   }
 
-  recordMatch({ matchId, opponent, mode, bet, pot, result, coinsChange, durationSec, kills }) {
+  recordMatch({ matchId, tableCode, opponent, mode, bet, pot, result, coinsChange, durationSec, kills }) {
     if (!this.currentUser) return;
 
     const entry = {
       id: matchId || `m_${Date.now()}`,
+      tableCode: tableCode || (matchId ? String(matchId).replace(/[^0-9]/g, "").slice(-4) : "1001"),
       date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       mode: mode || "1v1 Match",
@@ -225,6 +246,135 @@ export class UserManager {
     }
 
     this.saveUserProfile(this.currentUser);
+  }
+
+  getFriends(query = "") {
+    let list = this.currentUser && Array.isArray(this.currentUser.friends)
+      ? this.currentUser.friends
+      : STARTER_FRIENDS;
+
+    if (query && query.trim()) {
+      const q = query.trim().toLowerCase();
+      return list.filter(f =>
+        (f.nickName && f.nickName.toLowerCase().includes(q)) ||
+        (f.fullName && f.fullName.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }
+
+  addFriendByMobile(mobileInput) {
+    const mobile = this.cleanMobile(mobileInput);
+    if (!mobile || mobile.length !== 10) {
+      return { success: false, error: "Please enter a valid 10-digit mobile number." };
+    }
+
+    if (!this.currentUser) {
+      return { success: false, error: "Please login to add friends." };
+    }
+
+    if (this.currentUser.mobile === mobile) {
+      return { success: false, error: "You cannot add yourself as a friend!" };
+    }
+
+    if (!Array.isArray(this.currentUser.friends)) {
+      this.currentUser.friends = [...STARTER_FRIENDS];
+    }
+
+    if (this.currentUser.friends.some(f => f.mobile === mobile)) {
+      return { success: false, error: "This friend is already in your list." };
+    }
+
+    // Check if user is registered in the system
+    const registered = this.loadUserProfile(mobile);
+    let newFriend;
+    if (registered) {
+      newFriend = {
+        id: `f_${Date.now()}`,
+        mobile,
+        nickName: registered.nickName || registered.name || "Friend",
+        fullName: registered.fullName || registered.name || "Friend",
+        avatar: "👑",
+        level: Math.max(20, (registered.gamesPlayed || 0) * 3 + 15),
+        addedAt: Date.now()
+      };
+    } else {
+      const avatarList = ["😎", "🕶️", "👤", "🕵️", "🦁", "🦚"];
+      const randAvatar = avatarList[Math.floor(Math.random() * avatarList.length)];
+      newFriend = {
+        id: `f_${Date.now()}`,
+        mobile,
+        nickName: `Friend ${mobile.slice(-4)}`,
+        fullName: `Player ${mobile.slice(-4)}`,
+        avatar: randAvatar,
+        level: Math.floor(25 + Math.random() * 30),
+        addedAt: Date.now()
+      };
+    }
+
+    this.currentUser.friends.unshift(newFriend);
+    this.saveUserProfile(this.currentUser);
+
+    return {
+      success: true,
+      friend: newFriend,
+      message: `Added ${newFriend.nickName} to your friends!`
+    };
+  }
+
+  removeFriend(mobileOrId) {
+    if (!this.currentUser || !Array.isArray(this.currentUser.friends)) {
+      return { success: false, error: "No friends list found." };
+    }
+
+    this.currentUser.friends = this.currentUser.friends.filter(f =>
+      f.id !== mobileOrId && f.mobile !== mobileOrId
+    );
+    this.saveUserProfile(this.currentUser);
+    return { success: true };
+  }
+
+  getHourlyRewardStatus() {
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    const lastClaim = this.currentUser?.lastHourlyRewardClaim || 0;
+    const now = Date.now();
+    const elapsed = now - lastClaim;
+
+    if (lastClaim === 0 || elapsed >= ONE_HOUR_MS) {
+      return {
+        canClaim: true,
+        secondsLeft: 0,
+        rewardAmount: 500
+      };
+    }
+
+    const remainingSec = Math.max(0, Math.ceil((ONE_HOUR_MS - elapsed) / 1000));
+    return {
+      canClaim: false,
+      secondsLeft: remainingSec,
+      rewardAmount: 500
+    };
+  }
+
+  claimHourlyReward() {
+    const status = this.getHourlyRewardStatus();
+    if (!status.canClaim) {
+      const mins = Math.ceil(status.secondsLeft / 60);
+      return { success: false, error: `Hourly reward available in ${mins}m.` };
+    }
+
+    if (this.currentUser) {
+      this.currentUser.lastHourlyRewardClaim = Date.now();
+      this.saveUserProfile(this.currentUser);
+    }
+    wallet.addCoins(500);
+
+    return {
+      success: true,
+      reward: 500,
+      newBalance: wallet.getBalance(),
+      message: "🎉 Claimed 500 Free Coins! Next reward in 1 hour."
+    };
   }
 
   getHistory() {

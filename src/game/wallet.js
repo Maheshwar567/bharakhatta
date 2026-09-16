@@ -1,4 +1,4 @@
-﻿// Virtual Coin Wallet & Betting Economy Manager
+// Virtual Coin Wallet & Betting Economy Manager
 // Joining Bonus: 1,000 Coins; Bet stakes: 100, 250, 500, 1,000, 2,500, 5,000
 
 const STORAGE_KEY = 'bharakhatta_coins_wallet';
@@ -55,6 +55,12 @@ export class WalletManager {
 
   awardPot(potAmount) {
     this.balance += potAmount;
+    this.saveBalance();
+    return this.balance;
+  }
+
+  addCoins(amount) {
+    this.balance += Math.max(0, amount);
     this.saveBalance();
     return this.balance;
   }

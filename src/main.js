@@ -12,7 +12,7 @@ import { renderMobileModal, generateMobileQr } from "./components/MobileModal.js
 import { renderMultiplayerModal } from "./components/MultiplayerModal.js";
 import { renderChatDrawer, renderFloatingChatToast, QUICK_TAUNTS } from "./components/ChatDrawer.js";
 import { renderBetModal } from "./components/BetModal.js";
-import { MultiplayerClient } from "./game/multiplayerClient.js";
+import { MultiplayerClient, generateUnique4DigitTableCode } from "./game/multiplayerClient.js";
 import { wallet } from "./game/wallet.js";
 import { userManager, computeNickName } from "./game/userManager.js";
 import { renderLoginModal } from "./components/LoginModal.js";
@@ -20,6 +20,9 @@ import { renderProfileHistoryModal } from "./components/ProfileHistoryModal.js";
 import { renderExitConfirmModal, renderInactivityModal } from "./components/ExitModal.js";
 import { renderGatePromptModal } from "./components/GatePromptModal.js";
 import { renderLobbyView } from "./components/LobbyView.js";
+import { renderFriendsHubModal } from "./components/FriendsHubModal.js";
+import { renderCreateRoomModal, renderJoinRoomModal, renderAddFriendModal, renderCelebrationSplash } from "./components/RoomCodeModal.js";
+import { renderMatchHistoryModal } from "./components/MatchHistoryModal.js";
 import { TurnTimer } from "./game/turnTimer.js";
 import { sounds } from "./audio/soundManager.js";
 import { haptics } from "./utils/haptics.js";
@@ -48,6 +51,39 @@ class BharakhattaApp {
     this.soundMuted = false;
     this.qrDataUrl = null;
     this.roomQrDataUrl = null;
+
+    // Friends Hub & 4-Digit Room Codes (Matching user screenshot)
+    this.friendsHubOpen = false;
+    this.friendsTab = "challenge";
+    this.friendsSearchQuery = "";
+    this.isEditingFriends = false;
+    this.createRoomModalOpen = false;
+    this.joinRoomModalOpen = false;
+    this.addFriendModalOpen = false;
+    this.matchHistoryModalOpen = false;
+    this.celebrationSplash = { isOpen: false, tableCode: "", friendName: "" };
+    this.enteredJoinCode = "";
+    this.joinRoomError = null;
+    this.addFriendError = null;
+    this.roomCreationMode = "2p";
+    this.current4DigitCode = generateUnique4DigitTableCode();
+
+    // 1-second ticker for hourly reward countdown and live timers
+    this.hourlyTicker = setInterval(() => {
+      if (this.friendsHubOpen || this.inLobby) {
+        const rewardEl = document.getElementById("btn-lobby-hourly-reward");
+        const navRewardEl = document.getElementById("btn-nav-reward");
+        const status = userManager.getHourlyRewardStatus();
+        const text = status.canClaim ? "Free 500🪙" : `${Math.floor(status.secondsLeft / 60)}m ${status.secondsLeft % 60}s`;
+        if (rewardEl) {
+          rewardEl.className = `btn-hourly-reward-lobby ${status.canClaim ? 'reward-claim-glow' : 'reward-wait'}`;
+          rewardEl.innerHTML = `<span>🎁</span><span>${text}</span>`;
+        }
+        if (navRewardEl) {
+          navRewardEl.innerHTML = `<span class="nav-icon">🎁</span><span class="nav-label">${text}</span>${status.canClaim ? '<span class="nav-badge-dot">!</span>' : ''}`;
+        }
+      }
+    }, 1000);
 
     // Betting & Economy
     this.currentBet = 250;
@@ -552,21 +588,60 @@ class BharakhattaApp {
     this.engine.initGame(players);
     this.turnTimer.start();
 
+    // Direct game auto-start per user requirement (no start button required):
+    this.inLobby = false;
+    this.joinRoomModalOpen = false;
+    this.createRoomModalOpen = false;
+    this.friendsHubOpen = false;
+    this.mpModalOpen = false;
+
+    // Show celebration splash
+    this.celebrationSplash = {
+      isOpen: true,
+      tableCode: data.roomCode,
+      friendName: "Host"
+    };
+
     const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
     this.roomQrDataUrl = await generateMobileQr(shareUrl);
     this.engine.log(`🤝 Joined Room #${data.roomCode}! You are Team ${data.team}. Match pot: 🪙${this.matchPot.toLocaleString()}`);
     this.render();
+
+    setTimeout(() => {
+      this.celebrationSplash.isOpen = false;
+      this.render();
+    }, 1500);
   }
 
   handlePlayerJoined(player, players) {
     this.mpState.players = players;
-    this.engine.log(`🎉 ${player.name} connected! Both players paired. Match pot: 🪙${this.matchPot.toLocaleString()}`);
+    this.engine.log(`🎉 ${player.name} connected to Table #${this.mpState.roomCode}! Starting match directly...`);
     sounds.playBonusRoll();
     this.turnTimer.reset();
+
+    // Direct game auto-start on host screen:
+    this.inLobby = false;
+    this.createRoomModalOpen = false;
+    this.joinRoomModalOpen = false;
+    this.friendsHubOpen = false;
+    this.mpModalOpen = false;
+
+    // Show celebration splash on host screen
+    this.celebrationSplash = {
+      isOpen: true,
+      tableCode: this.mpState.roomCode,
+      friendName: player.name
+    };
+
     if (this.mpState.isHost && this.mpClient) {
       this.mpClient.sendGameState(this.engine.getStateSnapshot());
     }
     this.render();
+
+    setTimeout(() => {
+      this.celebrationSplash.isOpen = false;
+      this.render();
+    }, 1500);
   }
 
   handlePlayerLeft(playerId, players) {
@@ -716,8 +791,61 @@ class BharakhattaApp {
         walletCoins: wallet.getBalance(),
         selectedBet: this.selectedBet,
         playerCount: this.playerCount,
-        selectedMode: this.lobbyMode
+        selectedMode: this.lobbyMode,
+        hourlyRewardStatus: userManager.getHourlyRewardStatus()
       });
+    }
+
+    if (this.friendsHubOpen) {
+      const friends = userManager.getFriends(this.friendsSearchQuery);
+      const hourlyRewardStatus = userManager.getHourlyRewardStatus();
+      modalsHtml += renderFriendsHubModal({
+        isOpen: true,
+        friends,
+        searchQuery: this.friendsSearchQuery,
+        isEditing: this.isEditingFriends,
+        activeTab: this.friendsTab,
+        walletCoins: wallet.getBalance(),
+        diamonds: 385,
+        hourlyRewardStatus
+      });
+    }
+
+    if (this.createRoomModalOpen) {
+      const code = this.mpState.roomCode || this.current4DigitCode;
+      const shareUrl = `${this.baseMobileUrl}?room=${code}`;
+      modalsHtml += renderCreateRoomModal(true, {
+        roomCode: code,
+        mode: this.roomCreationMode,
+        selectedBet: this.currentBet,
+        walletCoins: wallet.getBalance(),
+        shareUrl,
+        qrDataUrl: this.roomQrDataUrl,
+        isWaiting: true
+      });
+    }
+
+    if (this.joinRoomModalOpen) {
+      modalsHtml += renderJoinRoomModal(true, {
+        errorMsg: this.joinRoomError,
+        enteredCode: this.enteredJoinCode
+      });
+    }
+
+    if (this.addFriendModalOpen) {
+      modalsHtml += renderAddFriendModal(true, {
+        errorMsg: this.addFriendError
+      });
+    }
+
+    if (this.matchHistoryModalOpen) {
+      const stats = userManager.getStats();
+      const history = userManager.getHistory();
+      modalsHtml += renderMatchHistoryModal(true, stats, history);
+    }
+
+    if (this.celebrationSplash.isOpen) {
+      modalsHtml += renderCelebrationSplash(true, this.celebrationSplash.tableCode, this.celebrationSplash.friendName);
     }
     if (this.profileModalOpen) {
       const user = userManager.getCurrentUser();
@@ -1322,18 +1450,336 @@ class BharakhattaApp {
       };
     }
 
-    // Prominent Hero "Request Friend to Play on Same Board" Button
+    // Prominent Hero "Request Friend to Play on Same Board" Button -> Opens Friends Hub
     const btnLobbyReqFriend = document.getElementById("btn-lobby-request-friend");
     if (btnLobbyReqFriend) {
       btnLobbyReqFriend.onclick = () => {
+        this.friendsHubOpen = true;
+        this.render();
+      };
+    }
+
+    // In-Game Header Friends Button
+    const btnHeaderFriends = document.getElementById("btn-header-friends");
+    if (btnHeaderFriends) {
+      btnHeaderFriends.onclick = () => {
+        this.friendsHubOpen = true;
+        this.render();
+      };
+    }
+
+    // Friends Hub Close & Back
+    const btnCloseFriendsHub = document.getElementById("btn-close-friends-hub");
+    if (btnCloseFriendsHub) {
+      btnCloseFriendsHub.onclick = () => {
+        this.friendsHubOpen = false;
+        this.render();
+      };
+    }
+
+    // Friends Hub Sub-Tabs
+    document.querySelectorAll("[data-fhub-tab]").forEach(tabBtn => {
+      tabBtn.onclick = () => {
+        this.friendsTab = tabBtn.getAttribute("data-fhub-tab");
+        this.render();
+      };
+    });
+
+    // Friends Hub Search
+    const inputFhubSearch = document.getElementById("input-fhub-search");
+    if (inputFhubSearch) {
+      inputFhubSearch.oninput = (e) => {
+        this.friendsSearchQuery = e.target.value;
+        this.render();
+      };
+    }
+
+    const btnClearFhubSearch = document.getElementById("btn-clear-fhub-search");
+    if (btnClearFhubSearch) {
+      btnClearFhubSearch.onclick = () => {
+        this.friendsSearchQuery = "";
+        this.render();
+      };
+    }
+
+    // Friends Hub: Create Room Button
+    const btnFhubCreateRoom = document.getElementById("btn-fhub-create-room");
+    if (btnFhubCreateRoom) {
+      btnFhubCreateRoom.onclick = async () => {
+        this.current4DigitCode = generateUnique4DigitTableCode();
         const user = userManager.getCurrentUser();
         const myName = user ? (user.nickName || user.name) : "Player 1";
-        const mode = this.playerCount === 4 ? "4p" : "2p";
-        this.mpModalOpen = true;
-        if (!this.mpState.roomCode) {
-          this.mpClient.createRoom(mode, myName);
-        }
+        await this.mpClient.createRoom(this.roomCreationMode, myName, this.current4DigitCode);
+        this.createRoomModalOpen = true;
         this.render();
+      };
+    }
+
+    // Friends Hub: Join Room Button
+    const btnFhubJoinRoom = document.getElementById("btn-fhub-join-room");
+    if (btnFhubJoinRoom) {
+      btnFhubJoinRoom.onclick = () => {
+        this.joinRoomModalOpen = true;
+        this.joinRoomError = null;
+        this.enteredJoinCode = "";
+        this.render();
+      };
+    }
+
+    // Friends Hub: Invite Friends on WhatsApp
+    const btnFhubInviteWa = document.getElementById("btn-fhub-invite-whatsapp");
+    if (btnFhubInviteWa) {
+      btnFhubInviteWa.onclick = () => {
+        const code = this.mpState.roomCode || this.current4DigitCode || generateUnique4DigitTableCode();
+        const shareUrl = `${this.baseMobileUrl}?room=${code}`;
+        const msg = encodeURIComponent(`Namaskaram! 🎲 Join my Bharakhatta table room! Table Code: *${code}*\nTap here to play: ${shareUrl}`);
+        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+      };
+    }
+
+    // Friends Hub: Add Friend Modal
+    const btnFhubAddFriend = document.getElementById("btn-fhub-add-friend");
+    const btnFhubEmptyAdd = document.getElementById("btn-fhub-empty-add");
+    if (btnFhubAddFriend) {
+      btnFhubAddFriend.onclick = () => {
+        this.addFriendModalOpen = true;
+        this.addFriendError = null;
+        this.render();
+      };
+    }
+    if (btnFhubEmptyAdd) {
+      btnFhubEmptyAdd.onclick = () => {
+        this.addFriendModalOpen = true;
+        this.addFriendError = null;
+        this.render();
+      };
+    }
+
+    // Friends Hub: Toggle Edit Mode (Pencil -> Delete button)
+    const btnFhubToggleEdit = document.getElementById("btn-fhub-toggle-edit");
+    if (btnFhubToggleEdit) {
+      btnFhubToggleEdit.onclick = () => {
+        this.isEditingFriends = !this.isEditingFriends;
+        this.render();
+      };
+    }
+
+    // Friend Card Actions: Gift, Challenge, Delete
+    document.querySelectorAll(".btn-fcard-gift").forEach(btn => {
+      btn.onclick = () => {
+        sounds.playBonusRoll();
+        haptics.light();
+        alert("🎁 You sent 100 Free Coins Gift to your friend!");
+      };
+    });
+
+    document.querySelectorAll(".btn-fcard-challenge").forEach(btn => {
+      btn.onclick = async () => {
+        const friendName = btn.getAttribute("data-friend-name") || "Friend";
+        this.current4DigitCode = generateUnique4DigitTableCode();
+        const user = userManager.getCurrentUser();
+        const myName = user ? (user.nickName || user.name) : "Player 1";
+        await this.mpClient.createRoom("2p", myName, this.current4DigitCode);
+        this.createRoomModalOpen = true;
+        this.engine.log(`⚔️ Challenged ${friendName} to Table #${this.current4DigitCode}!`);
+        this.render();
+      };
+    });
+
+    document.querySelectorAll(".btn-fcard-delete").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.getAttribute("data-friend-id");
+        if (id) {
+          userManager.removeFriend(id);
+          this.render();
+        }
+      };
+    });
+
+    // Bottom Navigation Bar Items
+    const btnNavHome = document.getElementById("btn-nav-home");
+    const btnNavFriends = document.getElementById("btn-nav-friends");
+    const btnNavReward = document.getElementById("btn-nav-reward");
+    const btnNavHistory = document.getElementById("btn-nav-history");
+    const btnNavProfile = document.getElementById("btn-nav-profile");
+
+    if (btnNavHome) {
+      btnNavHome.onclick = () => {
+        this.friendsHubOpen = false;
+        this.inLobby = true;
+        this.render();
+      };
+    }
+    if (btnNavFriends) {
+      btnNavFriends.onclick = () => {
+        this.friendsHubOpen = true;
+        this.render();
+      };
+    }
+
+    // Hourly Free Rewards Claiming
+    const doClaimHourlyReward = () => {
+      const res = userManager.claimHourlyReward();
+      if (res.success) {
+        sounds.playBonusRoll();
+        haptics.heavy();
+        this.engine.log(res.message);
+        alert(res.message);
+      } else {
+        alert(res.error);
+      }
+      this.render();
+    };
+
+    if (btnNavReward) btnNavReward.onclick = doClaimHourlyReward;
+    const btnLobbyHourly = document.getElementById("btn-lobby-hourly-reward");
+    if (btnLobbyHourly) btnLobbyHourly.onclick = doClaimHourlyReward;
+
+    // Dedicated Match History Modal
+    if (btnNavHistory) {
+      btnNavHistory.onclick = () => {
+        this.matchHistoryModalOpen = true;
+        this.render();
+      };
+    }
+
+    const btnLobbyHistory = document.getElementById("btn-lobby-history");
+    if (btnLobbyHistory) {
+      btnLobbyHistory.onclick = () => {
+        this.matchHistoryModalOpen = true;
+        this.render();
+      };
+    }
+
+    const btnCloseMatchHist = document.getElementById("btn-close-match-history");
+    const btnDoneMatchHist = document.getElementById("btn-done-match-history");
+    if (btnCloseMatchHist) btnCloseMatchHist.onclick = () => { this.matchHistoryModalOpen = false; this.render(); };
+    if (btnDoneMatchHist) btnDoneMatchHist.onclick = () => { this.matchHistoryModalOpen = false; this.render(); };
+
+    if (btnNavProfile) {
+      btnNavProfile.onclick = () => {
+        this.profileModalOpen = true;
+        this.render();
+      };
+    }
+
+    // Create Room Modal Handlers
+    const btnCloseCreateRoom = document.getElementById("btn-close-create-room");
+    if (btnCloseCreateRoom) {
+      btnCloseCreateRoom.onclick = () => {
+        this.createRoomModalOpen = false;
+        this.render();
+      };
+    }
+
+    const radioMode1v1 = document.getElementById("radio-mode-1v1");
+    const radioMode2v2 = document.getElementById("radio-mode-2v2");
+    if (radioMode1v1) {
+      radioMode1v1.onchange = () => {
+        this.roomCreationMode = "2p";
+        this.render();
+      };
+    }
+    if (radioMode2v2) {
+      radioMode2v2.onchange = () => {
+        this.roomCreationMode = "4p";
+        this.render();
+      };
+    }
+
+    document.querySelectorAll("[data-create-bet]").forEach(btn => {
+      btn.onclick = () => {
+        const bet = parseInt(btn.getAttribute("data-create-bet"), 10);
+        if (bet) {
+          this.currentBet = bet;
+          this.matchPot = bet * 2;
+          this.render();
+        }
+      };
+    });
+
+    const btnCopy4DigitCode = document.getElementById("btn-copy-4digit-code");
+    if (btnCopy4DigitCode) {
+      btnCopy4DigitCode.onclick = () => {
+        const code = btnCopy4DigitCode.getAttribute("data-code");
+        if (code) {
+          navigator.clipboard.writeText(code);
+          btnCopy4DigitCode.textContent = "✅ Copied!";
+          setTimeout(() => { if (btnCopy4DigitCode) btnCopy4DigitCode.textContent = `📋 Copy Code (${code})`; }, 1800);
+        }
+      };
+    }
+
+    // Join Room Modal Handlers
+    const btnCloseJoinRoom = document.getElementById("btn-close-join-room");
+    if (btnCloseJoinRoom) {
+      btnCloseJoinRoom.onclick = () => {
+        this.joinRoomModalOpen = false;
+        this.render();
+      };
+    }
+
+    const input4DigitCode = document.getElementById("input-4digit-code");
+    const btnSubmitJoinCode = document.getElementById("btn-submit-join-code");
+
+    const doSubmitJoinCode = async () => {
+      if (!input4DigitCode) return;
+      const code = input4DigitCode.value.trim();
+      if (!code || code.length !== 4) {
+        this.joinRoomError = "Please enter a valid 4-digit code (e.g. 4821).";
+        this.render();
+        return;
+      }
+
+      const user = userManager.getCurrentUser();
+      const myName = user ? (user.nickName || user.name) : "Player 2";
+      this.joinRoomError = null;
+      try {
+        await this.mpClient.joinRoom(code, myName);
+      } catch (err) {
+        this.joinRoomError = err.message || "Failed to connect to table.";
+        this.render();
+      }
+    };
+
+    if (btnSubmitJoinCode) btnSubmitJoinCode.onclick = doSubmitJoinCode;
+    if (input4DigitCode) {
+      input4DigitCode.onkeydown = (e) => {
+        if (e.key === "Enter") doSubmitJoinCode();
+      };
+    }
+
+    // Add Friend Modal Handlers
+    const btnCloseAddFriend = document.getElementById("btn-close-add-friend");
+    if (btnCloseAddFriend) {
+      btnCloseAddFriend.onclick = () => {
+        this.addFriendModalOpen = false;
+        this.render();
+      };
+    }
+
+    const inputFriendMobile = document.getElementById("input-friend-mobile");
+    const btnSubmitAddFriend = document.getElementById("btn-submit-add-friend");
+
+    const doSubmitAddFriend = () => {
+      if (!inputFriendMobile) return;
+      const mob = inputFriendMobile.value.trim();
+      const res = userManager.addFriendByMobile(mob);
+      if (res.success) {
+        this.addFriendModalOpen = false;
+        this.addFriendError = null;
+        alert(res.message);
+        this.render();
+      } else {
+        this.addFriendError = res.error;
+        this.render();
+      }
+    };
+
+    if (btnSubmitAddFriend) btnSubmitAddFriend.onclick = doSubmitAddFriend;
+    if (inputFriendMobile) {
+      inputFriendMobile.onkeydown = (e) => {
+        if (e.key === "Enter") doSubmitAddFriend();
       };
     }
 
@@ -1359,9 +1805,6 @@ class BharakhattaApp {
 
     const btnLobbyRules = document.getElementById("btn-lobby-rules");
     if (btnLobbyRules) btnLobbyRules.onclick = () => { this.rulesOpen = true; this.render(); };
-
-    const btnLobbyHistory = document.getElementById("btn-lobby-history");
-    if (btnLobbyHistory) btnLobbyHistory.onclick = () => { this.profileModalOpen = true; this.render(); };
 
     const btnLobbySwitchAcc = document.getElementById("btn-lobby-switch-acc");
     if (btnLobbySwitchAcc) {

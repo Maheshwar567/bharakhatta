@@ -14,7 +14,7 @@ import { CowrieDice } from "../src/game/cowries.js";
 import { getPlayerPath, isSafeSquare } from "../src/game/board.js";
 import { UserManager, computeNickName } from "../src/game/userManager.js";
 import { wallet } from "../src/game/wallet.js";
-import { generateUniqueBoardNumber, normalizeBoardNumber } from "../src/game/multiplayerClient.js";
+import { generateUniqueBoardNumber, generateUnique4DigitTableCode, normalizeBoardNumber } from "../src/game/multiplayerClient.js";
 import { renderCuppedPalm, renderCowrieArea } from "../src/components/CowrieShellsView.js";
 import { t, getLanguage, setLanguage, toggleLanguage } from "../src/utils/i18n.js";
 
@@ -543,6 +543,80 @@ function runTests() {
 
   const coinsAtStep5 = team1Coins.filter(c => c.stepIndex === 5);
   assert(coinsAtStep5.length === 3, "3 friendly coins co-exist seamlessly in Step 5");
+
+  // 20. Test 4-Digit Table Codes, Friends Management & Hourly Free Rewards
+  console.log("\n--- Test 20: 4-Digit Table Codes, Friends Management & Hourly Free Rewards ---");
+  
+  // 20a. 4-Digit Table Codes
+  const code1 = generateUnique4DigitTableCode();
+  assert(/^\d{4}$/.test(code1), "Table code is exactly 4 digits: " + code1);
+  assert(parseInt(code1, 10) >= 1000 && parseInt(code1, 10) <= 9999, "Table code is in 1000-9999 range");
+
+  // 1,000 non-repeating 4-digit codes
+  const usedCodes = new Set();
+  let codeCollisions = 0;
+  for (let i = 0; i < 1000; i++) {
+    const c = generateUnique4DigitTableCode();
+    if (usedCodes.has(c)) codeCollisions++;
+    usedCodes.add(c);
+  }
+  assert(codeCollisions === 0, "1,000 generated 4-digit table codes have 0 collisions (guaranteed non-repeating!)");
+
+  // 20b. Normalization
+  assert(normalizeBoardNumber("4821") === "4821", "Normalizes plain 4-digit code");
+  assert(normalizeBoardNumber("BK-4821") === "4821", "Normalizes BK-4821 to 4821");
+
+  // 20c. Friends Management in UserManager
+  const uMgr = new UserManager();
+  uMgr.login("9988776655", "Mahesh Reddy", "MR");
+  const initialFriends = uMgr.getFriends();
+  assert(initialFriends.length >= 6, "New user has initial challengeable starter friends list");
+
+  // Add friend by mobile
+  const addRes = uMgr.addFriendByMobile("9123456789");
+  assert(addRes.success === true, "Successfully added friend by 10-digit mobile number");
+  assert(addRes.friend.nickName !== undefined, "Friend has display nickName");
+  assert(addRes.friend.nickName.startsWith("Friend") || addRes.friend.nickName.length > 0, "Friend nickname is populated");
+
+  // Prevent duplicate
+  const dupRes = uMgr.addFriendByMobile("9123456789");
+  assert(dupRes.success === false, "Prevents adding duplicate friend");
+
+  // Remove friend
+  const remRes = uMgr.removeFriend("9123456789");
+  assert(remRes.success === true, "Successfully removed friend from list");
+
+  // 20d. Hourly 500 Coins Free Reward
+  const initialStatus = uMgr.getHourlyRewardStatus();
+  assert(initialStatus.canClaim === true, "Initial hourly reward is ready to claim");
+  assert(initialStatus.rewardAmount === 500, "Hourly reward amount is 500 coins");
+
+  const prevBalance = wallet.getBalance();
+  const claimRes = uMgr.claimHourlyReward();
+  assert(claimRes.success === true, "Successfully claimed 500 free coins hourly reward");
+  assert(wallet.getBalance() === prevBalance + 500, "Wallet balance increased by exactly 500 coins");
+
+  const immediateStatus = uMgr.getHourlyRewardStatus();
+  assert(immediateStatus.canClaim === false, "Immediate next claim is blocked (wait 1 hour)");
+  assert(immediateStatus.secondsLeft > 3500, "Seconds left is near 3600s (1 hour)");
+
+  // 20e. Match History Records Table Code
+  uMgr.recordMatch({
+    matchId: "m_test1",
+    tableCode: "4821",
+    opponent: "sumongamingf9c",
+    mode: "1v1 Match",
+    bet: 250,
+    pot: 500,
+    result: "WON",
+    coinsChange: 500,
+    durationSec: 120,
+    kills: 2
+  });
+  const matchHist = uMgr.getHistory();
+  assert(matchHist.length > 0, "Match recorded in history");
+  assert(matchHist[0].tableCode === "4821", "Match history records exact 4-digit table code (4821)");
+  assert(matchHist[0].opponent === "sumongamingf9c", "Match history displays opponent nickname");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);
