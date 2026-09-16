@@ -16,6 +16,7 @@ import { UserManager, computeNickName } from "../src/game/userManager.js";
 import { wallet } from "../src/game/wallet.js";
 import { generateUniqueBoardNumber, generateUnique4DigitTableCode, normalizeBoardNumber } from "../src/game/multiplayerClient.js";
 import { renderCuppedPalm, renderCowrieArea } from "../src/components/CowrieShellsView.js";
+import { renderBoard } from "../src/components/BoardView.js";
 import { t, getLanguage, setLanguage, toggleLanguage } from "../src/utils/i18n.js";
 
 function runTests() {
@@ -343,15 +344,34 @@ function runTests() {
   assert(shakingPalmHtml.includes("shake-folded-fist"), "Shaking animation active during roll toss");
   assert(shakingPalmHtml.includes("Shaking Palm (2 sec)"), "Shaking 2 sec status text active");
 
-  // In Cowrie Area after toss: Settled mat shows shells only, NOT palm!
+  // In Cowrie Area after toss: Settled mat shows shells and large number hero, NOT palm!
   const settledAreaHtml = renderCowrieArea({
     status: "WAITING_FOR_MOVE",
-    currentRoll: { score: 4, titleTe: "చింత", isBonus: false },
+    currentRoll: { score: 4, titleTe: "చింత", titleEn: "Chinta", isBonus: false },
     diceMode: "cowries",
     currentPlayer: { id: 1, name: "Player 1", isAI: false }
   });
   assert(settledAreaHtml.includes("settled-cowrie-mat"), "Settled state shows cowrie shells on board mat");
-  assert(!settledAreaHtml.includes("folded-palm-svg"), "Palm is completely hidden after toss (shells only on mat!)");
+  assert(settledAreaHtml.includes("post-shake-number-hero"), "Shows rolled number hero box instead of palm fold");
+  assert(settledAreaHtml.includes("post-shake-number-digit"), "Shows large numeric digit of roll");
+  assert(settledAreaHtml.includes(">4<"), "Shows rolled number 4 on screen");
+  assert(!settledAreaHtml.includes("folded-palm-svg"), "Palm is completely hidden after toss (number and shells only on screen!)");
+
+  // On Main Board Screen: Floating rolled number banner is displayed
+  const dummyEngine = new BharakhattaEngine();
+  dummyEngine.status = GAME_STATUS.WAITING_FOR_MOVE;
+  dummyEngine.currentRoll = { score: 4, titleTe: "చింత", titleEn: "Chinta", isBonus: false };
+  const boardHtml = renderBoard(dummyEngine.getStateSnapshot());
+  assert(boardHtml.includes("screen-roll-banner"), "Floating on-screen roll banner rendered on board");
+  assert(boardHtml.includes("roll-banner-num"), "Banner displays large rolled number");
+  assert(boardHtml.includes(">4<"), "Banner shows exact rolled digit 4");
+
+  // Zero moves case: resolveRoll sets status to WAITING_FOR_MOVE to show number instead of palm fold
+  const zeroMovesEngine = new BharakhattaEngine();
+  zeroMovesEngine.status = GAME_STATUS.ROLLING;
+  zeroMovesEngine.resolveRoll({ score: 3, titleTe: "మూడు", titleEn: "Moodu", isBonus: false });
+  assert(zeroMovesEngine.status === GAME_STATUS.WAITING_FOR_MOVE, "Status transitions to WAITING_FOR_MOVE even with 0 moves so number is shown on screen instead of palm fold");
+  assert(zeroMovesEngine.lastRoll.score === 3, "lastRoll correctly recorded as 3");
 
   // 14. Test Always 2 Homes Rule (2P and 4P modes)
   console.log("\n--- Test 14: Always 2 Homes Rule (H1 East & H2 North) ---");

@@ -1919,6 +1919,8 @@ function initBharakhatta() {
   new BharakhattaApp();
 }
 
+window.initBharakhatta = initBharakhatta;
+
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initBharakhatta);
 } else {

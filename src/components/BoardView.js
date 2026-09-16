@@ -4,7 +4,7 @@
 import { isSafeSquare, isCenterSquare } from "../game/board.js";
 
 export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
-  const { coins, validMoves, currentPlayer, status, team1Kills, team2Kills, players } = gameState;
+  const { coins, validMoves, currentPlayer, status, team1Kills, team2Kills, players, currentRoll } = gameState;
   const isWaitingMove = status === "WAITING_FOR_MOVE";
   const currentTeam = currentPlayer.team;
 
@@ -209,11 +209,31 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
     </div>
   `;
 
+  // Floating on-screen rolled number display (per user requirement: once palm shake over show number on screen)
+  let rollBannerHtml = "";
+  if (currentRoll && status !== "ROLLING") {
+    const isBonus = currentRoll.isBonus;
+    rollBannerHtml = `
+      <div class="screen-roll-banner animate-pop-in" title="Rolled ${currentRoll.score} (${currentRoll.titleTe || currentRoll.titleEn})">
+        <div class="roll-banner-badge ${isBonus ? 'roll-banner-bonus-glow' : ''}">
+          <span class="roll-banner-dice">🎲</span>
+          <span class="roll-banner-num">${currentRoll.score}</span>
+          <div class="roll-banner-details">
+            <span class="roll-banner-te">${currentRoll.titleTe || ''}</span>
+            <span class="roll-banner-en">${currentRoll.titleEn || ''}</span>
+          </div>
+          ${isBonus ? '<span class="roll-banner-star">⭐ BONUS TURN!</span>' : ''}
+        </div>
+      </div>
+    `;
+  }
+
   return `
     <div class="board-wrapper">
       ${topJailHtml}
       
       <div class="board-container">
+        ${rollBannerHtml}
         <div class="board-frame">
           <div class="board-grid">
             ${gridHtml}

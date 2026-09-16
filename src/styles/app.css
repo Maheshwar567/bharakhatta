@@ -322,6 +322,7 @@ body {
    7x7 BOARD (Proportionally sized to guarantee single-screen fit)
    ================================================================= */
 .board-container {
+  position: relative;
   background: #251208;
   padding: 4px;
   border-radius: 8px;
@@ -2886,6 +2887,201 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* =================================================================
+   POST-SHAKE ROLLED NUMBER DISPLAY (Replaces Folded Palm on Screen)
+   ================================================================= */
+.post-shake-screen-display {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+
+.post-shake-number-hero {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(50, 25, 12, 0.96), rgba(28, 14, 7, 0.96));
+  border: 1.5px solid #d4a359;
+  border-radius: 8px;
+  padding: 3px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.number-hero-bonus {
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.6);
+}
+
+.post-shake-num-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+}
+
+.post-shake-number-digit {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(180deg, #ffffff 0%, #ffd700 60%, #e67e22 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.post-shake-number-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.post-shake-title-te {
+  font-size: 12px;
+  font-weight: 900;
+  color: #fff9ea;
+}
+
+.post-shake-title-en {
+  font-size: 10px;
+  font-weight: 700;
+  color: #f39c12;
+}
+
+.post-shake-bonus-pill {
+  font-size: 8.5px;
+  font-weight: 900;
+  background: #e67e22;
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 1px;
+}
+
+.settled-action-badge {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.score-action-hint {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffdf9e;
+}
+
+.score-action-sub {
+  font-size: 9.5px;
+  color: #d4ac0d;
+}
+
+.hint-no-moves {
+  color: #e74c3c !important;
+}
+
+.hint-auto {
+  color: #f39c12 !important;
+}
+
+.hint-choose {
+  color: #2ecc71 !important;
+}
+
+.last-roll-reminder {
+  font-size: 10px;
+  color: #e5c388;
+  font-weight: 700;
+}
+
+/* Floating On-Screen Rolled Number Banner */
+.screen-roll-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: none;
+  animation: rollBannerPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes rollBannerPopIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.roll-banner-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: rgba(30, 15, 8, 0.96);
+  border: 2px solid #ffd700;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.75), 0 0 16px rgba(243, 156, 18, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.roll-banner-bonus-glow {
+  border-color: #ff9f43;
+  box-shadow: 0 4px 22px rgba(230, 126, 34, 0.8), 0 0 20px rgba(243, 156, 18, 0.7);
+  animation: pulseGoldBadge 1.2s infinite alternate;
+}
+
+.roll-banner-dice {
+  font-size: 20px;
+}
+
+.roll-banner-num {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(180deg, #ffffff 0%, #ffd700 55%, #e67e22 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.roll-banner-details {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.roll-banner-te {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff8e7;
+  letter-spacing: 0.3px;
+}
+
+.roll-banner-en {
+  font-size: 10px;
+  font-weight: 600;
+  color: #f39c12;
+}
+
+.roll-banner-star {
+  font-size: 9px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid #ffd700;
+  margin-left: 2px;
+  letter-spacing: 0.4px;
 }
 
 /* =================================================================

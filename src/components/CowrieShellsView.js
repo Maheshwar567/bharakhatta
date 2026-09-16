@@ -130,7 +130,7 @@ export function renderFoldedPalm(isRolling, canRoll, isMyTurn) {
 export const renderCuppedPalm = renderFoldedPalm;
 
 export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
-  const { status, currentRoll, diceMode, currentPlayer } = gameState;
+  const { status, currentRoll, lastRoll, diceMode, currentPlayer, validMoves } = gameState;
   const isRolling = status === "ROLLING";
 
   // In online multiplayer, check if it is MY turn
@@ -145,15 +145,16 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
 
   let shellsHtml = "";
   if (diceMode === "die") {
-    const val = currentRoll ? currentRoll.score : 6;
+    const val = currentRoll ? currentRoll.score : (lastRoll ? lastRoll.score : 6);
     shellsHtml = `
       <div class="dice-single-cube ${isRolling ? "dice-shake" : ""}">
         <span class="dice-val">${val}</span>
       </div>
     `;
   } else {
-    const shells = currentRoll && currentRoll.shells && currentRoll.shells.length === 6
-      ? currentRoll.shells
+    const activeRoll = currentRoll || (status === "WAITING_FOR_ROLL" ? null : lastRoll);
+    const shells = activeRoll && activeRoll.shells && activeRoll.shells.length === 6
+      ? activeRoll.shells
       : [
           { id: 0, isOpen: true, rot: 10, x: -3, y: -2 },
           { id: 1, isOpen: true, rot: -15, x: 2, y: 1 },
@@ -166,9 +167,33 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
     // User rule:
     // 1st step: palm folded (per image)
     // 2nd step: shake palm 2 sec
-    // 3rd step: release palm -> SHOW SHELLS ONLY, NOT PALM!
-    if (status === "WAITING_FOR_ROLL" || isRolling) {
-      shellsHtml = renderFoldedPalm(isRolling, canRoll, isMyTurn);
+    // 3rd step: once palm shake over -> SHOW NUMBER ON SCREEN INSTEAD OF PALM FOLD!
+    if (isRolling) {
+      // Shaking palm (2 sec)
+      shellsHtml = renderFoldedPalm(true, false, isMyTurn);
+    } else if (currentRoll) {
+      // Shake is OVER: Show number on screen instead of palm fold!
+      const isBonus = currentRoll.isBonus;
+      shellsHtml = `
+        <div class="settled-cowrie-mat post-shake-screen-display">
+          <div class="post-shake-number-hero ${isBonus ? 'number-hero-bonus' : ''}">
+            <div class="post-shake-num-badge">
+              <span class="post-shake-number-digit">${currentRoll.score}</span>
+            </div>
+            <div class="post-shake-number-meta">
+              <span class="post-shake-title-te">${currentRoll.titleTe || ''}</span>
+              <span class="post-shake-title-en">${currentRoll.titleEn || ''}</span>
+              ${isBonus ? '<span class="post-shake-bonus-pill">⭐ BONUS TURN</span>' : ''}
+            </div>
+          </div>
+          <div class="compact-cowrie-tray">
+            ${shells.map(s => renderCowrieShell(s, false)).join("")}
+          </div>
+        </div>
+      `;
+    } else if (status === "WAITING_FOR_ROLL") {
+      // Waiting for roll: Folded palm holding guvvalu ready to toss
+      shellsHtml = renderFoldedPalm(false, canRoll, isMyTurn);
     } else {
       // Settled after toss: show SHELLS ONLY on the board mat, NO PALM!
       shellsHtml = `
@@ -186,13 +211,32 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
   let scoreBadgeHtml = "";
   if (currentRoll && !isRolling) {
     const isBonus = currentRoll.isBonus;
+    let actionHtml = "";
+    if (validMoves && validMoves.length === 0) {
+      actionHtml = `
+        <span class="score-action-hint hint-no-moves">⚠️ No Moves</span>
+        <span class="score-action-sub">${isBonus ? "Bonus Roll..." : "Passes Turn..."}</span>
+      `;
+    } else if (validMoves && validMoves.length === 1 && !currentPlayer.isAI) {
+      actionHtml = `
+        <span class="score-action-hint hint-auto">⚡ Auto Move</span>
+        <span class="score-action-sub">Moving in 1s...</span>
+      `;
+    } else if (validMoves && validMoves.length > 1 && isMyTurn) {
+      actionHtml = `
+        <span class="score-action-hint hint-choose">👉 Your Move</span>
+        <span class="score-action-sub">Tap Coin / Target</span>
+      `;
+    } else {
+      actionHtml = `
+        <span class="turn-prompt">${isMyTurn ? "👉 Your Turn!" : `⏳ ${currentPlayer.name}'s Turn`}</span>
+        <span class="turn-timer-sub">⏳ ${timeLeft}s</span>
+      `;
+    }
+
     scoreBadgeHtml = `
-      <div class="compact-score-badge ${isBonus ? 'score-bonus-glow' : ''}">
-        <div class="score-main">
-          <span class="score-large">${currentRoll.score}</span>
-          <span class="score-name">${currentRoll.titleTe || ''}</span>
-        </div>
-        ${isBonus ? '<span class="bonus-pill">⭐ BONUS!</span>' : ''}
+      <div class="compact-score-badge settled-action-badge ${isBonus ? 'score-bonus-glow' : ''}">
+        ${actionHtml}
       </div>
     `;
   } else if (isRolling) {
@@ -206,7 +250,7 @@ export function renderCowrieArea(gameState, mpState = null, timeLeft = 30) {
     scoreBadgeHtml = `
       <div class="compact-score-badge idle-badge ${isMyTurn ? "badge-my-turn" : ""}">
         <span class="turn-prompt">${isMyTurn ? "👉 Your Turn!" : `⏳ ${currentPlayer.name}'s Turn`}</span>
-        <span class="turn-timer-sub">⏳ ${timeLeft}s</span>
+        ${lastRoll ? `<span class="last-roll-reminder">Last: 🎲 ${lastRoll.score} (${lastRoll.titleTe || lastRoll.titleEn})</span>` : `<span class="turn-timer-sub">⏳ ${timeLeft}s</span>`}
       </div>
     `;
   }

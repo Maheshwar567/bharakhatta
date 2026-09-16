@@ -89,6 +89,7 @@ export class BharakhattaEngine {
 
     this.currentPlayerIndex = 0;
     this.currentRoll = null;
+    this.lastRoll = null;
     this.status = GAME_STATUS.WAITING_FOR_ROLL;
     this.validMoves = [];
     this.winner = null;
@@ -150,9 +151,11 @@ export class BharakhattaEngine {
     }
 
     this.currentRoll = rollResult;
+    this.lastRoll = rollResult;
 
     // Shake folded palm for 2 seconds (2000ms) per user requirement:
     // "the first step is palm folded (per image) -> shake palm 2 sec -> release palm -> show shells only not palm"
+    // "once palm shake over show the number on screen instead palm fold"
     setTimeout(() => {
       this.resolveRoll(rollResult);
     }, 2000);
@@ -164,6 +167,7 @@ export class BharakhattaEngine {
     const player = this.getCurrentPlayer();
     const teamId = player.team;
     const score = rollResult.score;
+    this.lastRoll = rollResult;
 
     if (rollResult.score === 12) {
       sounds.playBaaraTwelve();
@@ -178,25 +182,29 @@ export class BharakhattaEngine {
     this.validMoves = moves;
 
     if (moves.length === 0) {
-      // No moves possible (e.g. rolled 2, 3, 4 with all coins in jail, or coin at step 22 rolling 2+ with 0 kills)
+      // Once palm shake is over, show the number on screen instead of palm fold!
+      this.status = GAME_STATUS.WAITING_FOR_MOVE;
+      this.emitChange();
       this.log(`⚠️ No valid moves possible with roll of ${score}.`);
 
       // Even if bonus was rolled, if no moves exist, turn continues or ends?
       // If bonus was rolled (1, 5, 6, 12), player gets to roll again!
-      // After toss wait for 1 sec every time before re-roll or pass
+      // After toss wait 1.2s so player clearly sees the settled number on screen
       if (rollResult.isBonus) {
         this.stats.bonusTurnsCount++;
         this.log(`✨ Bonus roll allowed ${player.name} another roll!`);
         setTimeout(() => {
           this.status = GAME_STATUS.WAITING_FOR_ROLL;
+          this.currentRoll = null;
+          this.validMoves = [];
           this.emitChange();
           this.checkAITurn();
-        }, 1000);
+        }, 1200);
       } else {
-        // Pass turn after 1 second so player clearly sees the settled shells
+        // Pass turn after 1.2s so player clearly sees the settled number on screen
         setTimeout(() => {
           this.advanceTurn();
-        }, 1000);
+        }, 1200);
       }
       return;
     }
@@ -471,6 +479,9 @@ export class BharakhattaEngine {
 
   finishMove(getsBonusTurn) {
     const player = this.getCurrentPlayer();
+    if (this.currentRoll) {
+      this.lastRoll = this.currentRoll;
+    }
 
     if (getsBonusTurn) {
       this.stats.bonusTurnsCount++;
@@ -489,6 +500,9 @@ export class BharakhattaEngine {
 
   advanceTurn() {
     this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+    if (this.currentRoll) {
+      this.lastRoll = this.currentRoll;
+    }
     this.currentRoll = null;
     this.validMoves = [];
     this.status = GAME_STATUS.WAITING_FOR_ROLL;
@@ -635,6 +649,7 @@ export class BharakhattaEngine {
       players: this.players,
       currentPlayer: this.getCurrentPlayer(),
       currentRoll: this.currentRoll,
+      lastRoll: this.lastRoll,
       coins: this.coins.map(c => ({ ...c })),
       validMoves: this.validMoves,
       winner: this.winner,
@@ -658,6 +673,9 @@ export class BharakhattaEngine {
       }
     }
     this.currentRoll = snapshot.currentRoll || null;
+    if (snapshot.lastRoll) {
+      this.lastRoll = snapshot.lastRoll;
+    }
     if (snapshot.coins && Array.isArray(snapshot.coins)) {
       this.coins = snapshot.coins.map(c => ({ ...c }));
     }
