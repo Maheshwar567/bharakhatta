@@ -881,7 +881,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 2000;
   padding: 12px;
 }
 
@@ -4865,4 +4865,556 @@ body {
   0% { transform: scale(0.8); opacity: 0.6; }
   100% { transform: scale(1.2); opacity: 1; }
 }
+
+/* =================================================================
+   CASUAL MOBILE LOBBY GUI (Inspired by media_1789641698793.png)
+   ================================================================= */
+.casual-mobile-lobby {
+  background: radial-gradient(circle at 50% 20%, #20509e 0%, #15346d 60%, #0d2149 100%) !important;
+  background-image: radial-gradient(circle at 50% 20%, #20509e 0%, #15346d 60%, #0d2149 100%), 
+                    radial-gradient(rgba(255,255,255,0.08) 1.5px, transparent 1.5px) !important;
+  background-size: 100% 100%, 16px 16px !important;
+  border: 2.5px solid #3b79db !important;
+  border-radius: 20px !important;
+  padding: 10px 12px 8px 12px !important;
+  max-width: 440px !important;
+  width: 100% !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 25px rgba(52, 152, 219, 0.4) !important;
+}
+
+/* Top Currency & Profile Bar */
+.lobby-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(10, 25, 55, 0.7);
+  border: 1px solid rgba(52, 152, 219, 0.4);
+  border-radius: 14px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  background: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.avatar-symbol {
+  font-size: 20px;
+}
+
+.avatar-lvl-badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #fff;
+}
+
+.profile-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-nick {
+  font-size: 11.5px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.2px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xp-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #0f1d38;
+  border-radius: 6px;
+  height: 8px;
+  width: 60px;
+  padding: 0 2px;
+  border: 0.5px solid #3498db;
+}
+
+.xp-star {
+  font-size: 7px;
+  color: #ffd700;
+}
+
+.xp-bar-fill {
+  flex: 1;
+  height: 4px;
+  background: linear-gradient(90deg, #f39c12, #2ecc71);
+  border-radius: 3px;
+}
+
+/* Currencies Group */
+.lobby-currencies-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.currency-pill {
+  display: flex;
+  align-items: center;
+  background: #0b1a36;
+  border: 1.5px solid #2980b9;
+  border-radius: 14px;
+  padding: 2px 6px 2px 6px;
+  gap: 4px;
+}
+
+.coin-currency {
+  border-color: #f39c12;
+}
+
+.gem-currency {
+  border-color: #00cec9;
+}
+
+.curr-icon {
+  font-size: 13px;
+}
+
+.curr-val {
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.curr-plus-btn {
+  background: #27ae60;
+  border: 1px solid #2ecc71;
+  color: #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.btn-lobby-lang {
+  background: #2980b9;
+  border: 1px solid #74b9ff;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+
+.btn-lobby-switch-acc {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 11px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+/* 2. Badges & Golden CLAIM! Ticket */
+.lobby-claim-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mini-badges-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mini-badge-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 35, 75, 0.85);
+  border: 1px solid #3498db;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 10px;
+  color: #dcedc8;
+}
+
+.mini-badge-pill strong {
+  color: #ffd700;
+}
+
+/* Big Golden CLAIM! Ticket (Matching reference screenshot) */
+.golden-claim-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: linear-gradient(180deg, #ffeaa7 0%, #fdcb6e 40%, #e17055 100%);
+  border: 2px solid #fff;
+  border-radius: 14px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 16px rgba(243, 156, 18, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.golden-claim-ticket:active {
+  transform: scale(0.98);
+}
+
+.claim-ticket-ready {
+  animation: ticketPulse 1.8s infinite alternate;
+}
+
+@keyframes ticketPulse {
+  0% { transform: scale(1); box-shadow: 0 4px 14px rgba(243, 156, 18, 0.5); }
+  100% { transform: scale(1.02); box-shadow: 0 6px 22px rgba(243, 156, 18, 0.9), 0 0 15px #ffd700; }
+}
+
+.ticket-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ticket-star {
+  font-size: 18px;
+}
+
+.ticket-text-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ticket-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #8b2b07;
+  letter-spacing: 1.5px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.ticket-sub {
+  font-size: 10px;
+  font-weight: 800;
+  color: #4a1502;
+}
+
+.ticket-gift {
+  font-size: 20px;
+}
+
+/* 3. Brand Strip */
+.lobby-brand-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.brand-cowrie-ico {
+  font-size: 22px;
+}
+
+.brand-titles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-game-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffd700;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+.brand-tagline {
+  font-size: 9.5px;
+  color: #c7ecee;
+  font-weight: 600;
+}
+
+/* 4. MAIN 3D GAME MODE BUTTONS (Computer vs Friends) */
+.hero-game-modes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.game-mode-3d-btn {
+  position: relative;
+  height: 140px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px 10px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.game-mode-3d-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.6), 0 5px 10px rgba(0,0,0,0.5) !important;
+}
+
+.btn-3d-sheen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 18px 18px 40px 40px;
+  pointer-events: none;
+}
+
+/* Yellow 3D Button (Computer - Matching screenshot) */
+.btn-mode-yellow {
+  background: linear-gradient(180deg, #ffd32a 0%, #ffa801 50%, #ff5e57 100%);
+  border: 3.5px solid #fff5cc;
+  box-shadow: 0 8px 0 #b33939, 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+.yellow-icon-box {
+  position: relative;
+  width: 50px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.yellow-icon-box .device-icon {
+  font-size: 26px;
+}
+
+.yellow-icon-box .vs-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #2ecc71;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.btn-mode-yellow .btn-3d-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #4a2800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.btn-mode-yellow .btn-3d-desc {
+  font-size: 9px;
+  font-weight: 700;
+  color: #6d3a00;
+}
+
+/* Cyan/Blue 3D Button (Friends - Matching screenshot) */
+.btn-mode-cyan {
+  background: linear-gradient(180deg, #48dbfb 0%, #0abde3 50%, #0652dd 100%);
+  border: 3.5px solid #dff9fb;
+  box-shadow: 0 8px 0 #0c2461, 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+.cyan-icon-box {
+  position: relative;
+  width: 50px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.cyan-icon-box .friends-icon {
+  font-size: 26px;
+}
+
+.cyan-icon-box .heart-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 12px;
+}
+
+.btn-mode-cyan .btn-3d-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  margin: 0;
+}
+
+.btn-mode-cyan .btn-3d-desc {
+  font-size: 9px;
+  font-weight: 700;
+  color: #dff9fb;
+}
+
+.btn-3d-pill {
+  margin-top: 5px;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1.5px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.pill-offline {
+  background: #27ae60;
+  color: #fff;
+  border: 0.5px solid #a8e6cf;
+}
+
+.pill-friends {
+  background: #8e44ad;
+  color: #fff;
+  border: 0.5px solid #d2b4de;
+}
+
+/* 5. Bottom Navigation Bar */
+.casual-bottom-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(10, 25, 55, 0.9);
+  border: 1px solid rgba(52, 152, 219, 0.35);
+  border-radius: 16px;
+  padding: 6px 4px;
+}
+
+.bnav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: none;
+  color: #8da4c4;
+  cursor: pointer;
+  position: relative;
+  padding: 2px 6px;
+  transition: transform 0.1s ease, color 0.1s ease;
+}
+
+.bnav-item:active {
+  transform: scale(0.92);
+}
+
+.bnav-icon {
+  font-size: 18px;
+}
+
+.bnav-label {
+  font-size: 9px;
+  font-weight: 800;
+  margin-top: 1px;
+}
+
+.bnav-active {
+  color: #ffd700 !important;
+  background: rgba(52, 152, 219, 0.25);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+}
+
+.bnav-badge-free {
+  position: absolute;
+  top: -4px;
+  right: 0px;
+  background: #2ecc71;
+  color: #fff;
+  font-size: 7px;
+  font-weight: 900;
+  padding: 0.5px 3px;
+  border-radius: 4px;
+  border: 0.5px solid #fff;
+}
+
+/* Modal z-index enforcement: All modals must display cleanly on top of lobby */
+.login-modal-backdrop {
+  z-index: 2500 !important;
+}
+
+.computer-match-backdrop,
+.friends-hub-backdrop {
+  z-index: 2200 !important;
+}
+
+.btn-login-lang-toggle {
+  background: #2980b9;
+  border: 1px solid #74b9ff;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
 

@@ -52,15 +52,19 @@ export function setupMultiplayerServer(httpServer) {
         const { type } = msg;
 
         if (type === "CREATE_ROOM") {
-          const roomCode = generateRoomCode();
+          const roomCode = (msg.roomCode && String(msg.roomCode).trim())
+            ? String(msg.roomCode).trim()
+            : generateRoomCode();
           const mode = msg.mode || "2p";
           const playerName = msg.playerName || "Player 1 (Host)";
+          const userMeta = msg.userMeta || null;
 
           const player = {
             id: 1,
             team: 1,
             name: playerName,
             isHost: true,
+            userMeta,
             ws
           };
 
@@ -72,6 +76,14 @@ export function setupMultiplayerServer(httpServer) {
           };
 
           rooms.set(roomCode, room);
+          const upperCode = roomCode.toUpperCase().replace(/\s+/g, "");
+          rooms.set(upperCode, room);
+          if (upperCode.startsWith("BK-")) {
+            rooms.set(upperCode.replace(/^BK-/, ""), room);
+          } else {
+            rooms.set(`BK-${upperCode}`, room);
+          }
+
           currentRoomCode = roomCode;
           currentPlayerId = 1;
 
@@ -81,22 +93,30 @@ export function setupMultiplayerServer(httpServer) {
             playerId: 1,
             team: 1,
             mode,
-            players: room.players.map(p => ({ id: p.id, team: p.team, name: p.name, isHost: p.isHost }))
+            players: room.players.map(p => ({ id: p.id, team: p.team, name: p.name, isHost: p.isHost, userMeta: p.userMeta }))
           }));
           return;
         }
 
         if (type === "JOIN_ROOM") {
-          const rawCode = (msg.roomCode || "").trim().toUpperCase();
+          const rawCode = (msg.roomCode || "").toString().trim().toUpperCase().replace(/\s+/g, "");
           let room = rooms.get(rawCode);
           let matchedKey = rawCode;
 
           if (!room) {
+            const stripped = rawCode.replace(/^BK-/, "");
+            room = rooms.get(stripped) || rooms.get(`BK-${stripped}`);
+            if (room) {
+              matchedKey = room.code;
+            }
+          }
+
+          if (!room) {
             for (const [key, val] of rooms.entries()) {
-              const kClean = key.toUpperCase();
+              const kClean = key.toUpperCase().replace(/\s+/g, "");
               if (kClean === rawCode || kClean.replace(/^BK-/, "") === rawCode.replace(/^BK-/, "")) {
                 room = val;
-                matchedKey = key;
+                matchedKey = val.code;
                 break;
               }
             }
@@ -107,7 +127,7 @@ export function setupMultiplayerServer(httpServer) {
             return;
           }
 
-          const roomCode = matchedKey;
+          const roomCode = matchedKey || room.code;
           const maxPlayers = room.mode === "4p" ? 4 : 2;
           if (room.players.length >= maxPlayers) {
             ws.send(JSON.stringify({ type: "ERROR", message: `Board "${roomCode}" is already full.` }));
@@ -119,35 +139,58 @@ export function setupMultiplayerServer(httpServer) {
           const newId = is4p && room.players.length === 1 ? 3 : room.players.length + 1;
           const team = (newId === 1 || newId === 3) ? 1 : 2;
           const playerName = msg.playerName || `Player ${newId}`;
+          const userMeta = msg.userMeta || null;
 
           const player = {
             id: newId,
             team,
             name: playerName,
             isHost: false,
+            userMeta,
             ws
           };
 
           room.players.push(player);
-          currentRoomCode = roomCode;
+          currentRoomCode = room.code;
           currentPlayerId = newId;
 
-          const playerSummary = room.players.map(p => ({ id: p.id, team: p.team, name: p.name, isHost: p.isHost }));
+          const playerSummary = room.players.map(p => ({
+            id: p.id,
+            team: p.team,
+            name: p.name,
+            isHost: p.isHost,
+            userMeta: p.userMeta
+          }));
+
+          const hostPlayer = room.players[0] || {};
+          const hostMeta = hostPlayer.userMeta || {};
 
           // Notify joining player
           ws.send(JSON.stringify({
             type: "ROOM_JOINED",
-            roomCode,
+            roomCode: room.code,
             playerId: newId,
             team,
             mode: room.mode,
-            players: playerSummary
+            players: playerSummary,
+            hostMobile: hostMeta.mobile || null,
+            hostNick: hostMeta.nickName || hostMeta.name || hostPlayer.name || "Host",
+            hostFullName: hostMeta.fullName || hostMeta.name || hostPlayer.name || "Host"
           }));
 
           // Notify existing players
           broadcast(room, {
             type: "PLAYER_JOINED",
-            player: { id: newId, team, name: playerName },
+            player: {
+              id: newId,
+              team,
+              name: playerName,
+              isHost: false,
+              mobile: userMeta ? userMeta.mobile : null,
+              nickName: userMeta ? (userMeta.nickName || userMeta.name) : playerName,
+              fullName: userMeta ? (userMeta.fullName || userMeta.name) : playerName,
+              userMeta
+            },
             players: playerSummary
           }, ws);
 
@@ -174,7 +217,9 @@ export function setupMultiplayerServer(httpServer) {
         room.players = room.players.filter(p => p.ws !== ws);
 
         if (room.players.length === 0) {
-          rooms.delete(currentRoomCode);
+          for (const [key, r] of rooms.entries()) {
+            if (r === room) rooms.delete(key);
+          }
         } else {
           broadcast(room, {
             type: "PLAYER_LEFT",

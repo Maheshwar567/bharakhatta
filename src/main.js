@@ -81,8 +81,22 @@ class BharakhattaApp {
         const status = userManager.getHourlyRewardStatus();
         const text = status.canClaim ? "Free 500🪙" : `${Math.floor(status.secondsLeft / 60)}m ${status.secondsLeft % 60}s`;
         if (rewardEl) {
-          rewardEl.className = `btn-hourly-reward-lobby ${status.canClaim ? 'reward-claim-glow' : 'reward-wait'}`;
-          rewardEl.innerHTML = `<span>🎁</span><span>${text}</span>`;
+          const subEl = rewardEl.querySelector(".ticket-sub");
+          const titleEl = rewardEl.querySelector(".ticket-title");
+          if (subEl && titleEl) {
+            titleEl.textContent = status.canClaim ? t("freeCoinsClaim") : t("freeCoinsBtn");
+            subEl.textContent = status.canClaim ? "Free 500 Coins Ready!" : `Wait: ${text}`;
+            if (status.canClaim) {
+              rewardEl.classList.remove("claim-ticket-cooldown");
+              rewardEl.classList.add("claim-ticket-ready");
+            } else {
+              rewardEl.classList.remove("claim-ticket-ready");
+              rewardEl.classList.add("claim-ticket-cooldown");
+            }
+          } else {
+            rewardEl.className = `btn-hourly-reward-lobby ${status.canClaim ? 'reward-claim-glow' : 'reward-wait'}`;
+            rewardEl.innerHTML = `<span>🎁</span><span>${text}</span>`;
+          }
         }
         if (navRewardEl) {
           navRewardEl.innerHTML = `<span class="nav-icon">🎁</span><span class="nav-label">${text}</span>${status.canClaim ? '<span class="nav-badge-dot">!</span>' : ''}`;
@@ -1823,7 +1837,13 @@ class BharakhattaApp {
 
     if (btnNavHome) {
       btnNavHome.onclick = () => {
+        this.computerModalOpen = false;
         this.friendsHubOpen = false;
+        this.joinRoomModalOpen = false;
+        this.createRoomModalOpen = false;
+        this.profileModalOpen = false;
+        this.rulesOpen = false;
+        this.matchHistoryModalOpen = false;
         this.inLobby = true;
         this.render();
       };
@@ -2119,7 +2139,7 @@ class BharakhattaApp {
       btnGateRestart.onclick = () => this.handleGate23Decision("restart");
     }
 
-    // Language Toggle
+    // Language Toggles
     const btnToggleLang = document.getElementById("btn-toggle-lang");
     if (btnToggleLang) {
       btnToggleLang.onclick = () => {
@@ -2135,6 +2155,30 @@ class BharakhattaApp {
         this.render();
       };
     }
+
+    const btnLoginLang = document.getElementById("btn-login-lang-toggle");
+    if (btnLoginLang) {
+      btnLoginLang.onclick = () => {
+        toggleLanguage();
+        this.render();
+      };
+    }
+
+    // Currency & Store Actions
+    const btnLobbyAddCoins = document.getElementById("btn-lobby-add-coins");
+    const btnNavStore = document.getElementById("btn-nav-store");
+    const onAddCoins = () => {
+      const res = wallet.claimRefill();
+      if (res.success) {
+        sounds.playBonusRoll();
+        alert(`🎁 Free Refill! Added 🪙${res.amount.toLocaleString()} coins!\nNew Balance: 🪙${res.balance.toLocaleString()}`);
+        this.render();
+      } else {
+        alert(`🪙 Coin Refill: Available when balance is under 🪙250. You currently have 🪙${wallet.getBalance().toLocaleString()}!`);
+      }
+    };
+    if (btnLobbyAddCoins) btnLobbyAddCoins.onclick = (e) => { e.stopPropagation(); onAddCoins(); };
+    if (btnNavStore) btnNavStore.onclick = onAddCoins;
   }
 }
 

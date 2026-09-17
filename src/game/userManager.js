@@ -2,6 +2,7 @@
 // Persists profile, lifetime stats, coin balance, and complete match history per 10-digit mobile number
 
 import { wallet } from "./wallet.js";
+import { t } from "../utils/i18n.js";
 
 const CURRENT_USER_KEY = "bk_current_user_mobile";
 const ALL_USERS_KEY = "bk_all_registered_mobiles";
@@ -120,7 +121,7 @@ export class UserManager {
   login(mobileInput, fullNameInput = "", nickNameInput = "", isSignUp = null) {
     const mobile = this.cleanMobile(mobileInput);
     if (!mobile || mobile.length !== 10) {
-      return { success: false, error: "Please enter a valid 10-digit mobile number." };
+      return { success: false, error: t("errInvalidMobile") };
     }
 
     const existing = this.loadUserProfile(mobile);
@@ -133,14 +134,14 @@ export class UserManager {
       return {
         success: false,
         isNotRegistered: true,
-        error: "Account not found for this mobile number. Please select 'Sign Up' to create your account!"
+        error: t("errUnregistered")
       };
     }
 
     if (wantsSignUp && !existing && !fullName) {
       return {
         success: false,
-        error: "Please enter your Full Name to sign up."
+        error: t("errMissingName")
       };
     }
 
