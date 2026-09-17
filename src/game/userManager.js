@@ -117,15 +117,34 @@ export class UserManager {
     }
   }
 
-  login(mobileInput, fullNameInput = "", nickNameInput = "") {
+  login(mobileInput, fullNameInput = "", nickNameInput = "", isSignUp = null) {
     const mobile = this.cleanMobile(mobileInput);
     if (!mobile || mobile.length !== 10) {
       return { success: false, error: "Please enter a valid 10-digit mobile number." };
     }
 
-    const fullName = (fullNameInput || "").trim();
-    const nickName = computeNickName(fullName, nickNameInput);
     const existing = this.loadUserProfile(mobile);
+    const fullName = (fullNameInput || "").trim();
+
+    // Auto-detect sign-up intent: If fullName is given, caller intends to register/save profile
+    const wantsSignUp = isSignUp === true || (isSignUp === null && fullName.length > 0);
+
+    if (!wantsSignUp && !existing) {
+      return {
+        success: false,
+        isNotRegistered: true,
+        error: "Account not found for this mobile number. Please select 'Sign Up' to create your account!"
+      };
+    }
+
+    if (wantsSignUp && !existing && !fullName) {
+      return {
+        success: false,
+        error: "Please enter your Full Name to sign up."
+      };
+    }
+
+    const nickName = computeNickName(fullName || (existing?.fullName || existing?.name || ""), nickNameInput);
 
     if (existing) {
       // Existing User!
@@ -319,6 +338,51 @@ export class UserManager {
       success: true,
       friend: newFriend,
       message: `Added ${newFriend.nickName} to your friends!`
+    };
+  }
+
+  addOrUpdateFriend(friendData) {
+    if (!this.currentUser || !friendData || !friendData.mobile) return { success: false, error: "Invalid friend data" };
+    const mobile = this.cleanMobile(friendData.mobile);
+    if (!mobile || mobile === this.currentUser.mobile) return { success: false, error: "Cannot add self" };
+
+    if (!Array.isArray(this.currentUser.friends)) {
+      this.currentUser.friends = [...STARTER_FRIENDS];
+    }
+
+    const nick = friendData.nickName || friendData.name || `Friend ${mobile.slice(-4)}`;
+    const full = friendData.fullName || friendData.name || `Player ${mobile.slice(-4)}`;
+
+    const existingIdx = this.currentUser.friends.findIndex(f => f.mobile === mobile);
+    if (existingIdx !== -1) {
+      this.currentUser.friends[existingIdx].nickName = nick;
+      this.currentUser.friends[existingIdx].name = nick;
+      this.currentUser.friends[existingIdx].fullName = full;
+      this.saveUserProfile(this.currentUser);
+      return {
+        success: true,
+        isNew: false,
+        friend: this.currentUser.friends[existingIdx]
+      };
+    }
+
+    const newFriend = {
+      id: `f_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      mobile,
+      nickName: nick,
+      name: nick,
+      fullName: full,
+      avatar: friendData.avatar || "👤",
+      level: friendData.level || Math.floor(25 + Math.random() * 30),
+      addedAt: Date.now()
+    };
+
+    this.currentUser.friends.unshift(newFriend);
+    this.saveUserProfile(this.currentUser);
+    return {
+      success: true,
+      isNew: true,
+      friend: newFriend
     };
   }
 
