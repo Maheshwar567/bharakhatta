@@ -71,7 +71,7 @@ export function renderHeader(gameState, soundMuted, mpState = null, options = {}
 
         <!-- Room Indicator -->
         ${inOnlineRoom ? `
-          <div class="room-indicator-pill" id="btn-open-mp-badge" title="${t("boardNumber")}: #${mpState.roomCode}">
+          <div class="room-indicator-pill table-live-badge ${isPaired ? 'table-connected' : 'table-waiting'}" id="btn-open-mp-badge" title="${t("boardNumber")}: #${mpState.roomCode}">
             <span class="live-dot">${isPaired ? "🟢" : "⏳"}</span>
             <span>Table: <strong>#${mpState.roomCode}</strong></span>
           </div>

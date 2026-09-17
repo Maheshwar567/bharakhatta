@@ -105,6 +105,20 @@ export function normalizeBoardNumber(rawCode) {
   return clean;
 }
 
+// Multi-STUN High-Availability ICE Configuration for mobile carriers
+export const PEER_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
+      { urls: "stun:stun.services.mozilla.com" }
+    ]
+  }
+};
+
 export class MultiplayerClient {
   constructor(options = {}) {
     this.ws = null;
@@ -261,15 +275,16 @@ export class MultiplayerClient {
     }
   }
 
-  async createRoom(mode = "2p", playerName = "Player 1", customCode = null) {
+  async createRoom(mode = "2p", playerName = "Player 1", customCode = null, userMeta = null) {
     this.hostName = playerName;
+    this.hostMeta = userMeta;
     this.gameMode = mode;
 
     // Check if we should use P2P or WS
     if (!this.isP2PPreferred()) {
       try {
         await this.connectWS();
-        this.send({ type: "CREATE_ROOM", mode, playerName, roomCode: customCode });
+        this.send({ type: "CREATE_ROOM", mode, playerName, roomCode: customCode, userMeta });
         return;
       } catch (e) {
         console.log("WS failed, switching to P2P WebRTC:", e);
@@ -285,7 +300,7 @@ export class MultiplayerClient {
       try { this.peer.destroy(); } catch (_) {}
     }
 
-    this.peer = new Peer(peerId);
+    this.peer = new Peer(peerId, PEER_CONFIG);
 
     this.peer.on("open", () => {
       this.roomCode = roomCode;
@@ -307,11 +322,27 @@ export class MultiplayerClient {
       this.peerConn = conn;
       this.peerConns.add(conn);
 
+      // Start 3-second heartbeat ping to keep connection alive on mobile
+      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = setInterval(() => {
+        if (conn.open) {
+          try { conn.send({ type: "HEARTBEAT_PING", t: Date.now() }); } catch (_) {}
+        }
+      }, 3000);
+
       conn.on("open", () => {
         // Connected to guest
       });
 
       conn.on("data", (data) => {
+        if (data.type === "HEARTBEAT_PING") {
+          try { conn.send({ type: "HEARTBEAT_PONG" }); } catch (_) {}
+          return;
+        }
+        if (data.type === "HEARTBEAT_PONG") {
+          return;
+        }
+
         // Forward data to other peers if host
         if (this.isHost && this.peerConns.size > 1) {
           for (const otherConn of this.peerConns) {
@@ -323,6 +354,11 @@ export class MultiplayerClient {
 
         if (data.type === "JOIN_ROOM") {
           this.guestName = data.playerName || "Player 2";
+          this.guestMeta = {
+            mobile: data.mobile || "",
+            nickName: data.nickName || data.playerName || "Player 2",
+            fullName: data.fullName || data.playerName || "Player 2"
+          };
           // In 4P mode, friend joins Team 1 as partner (Player 3), with Players 2 & 4 as System AI opposite pair
           const is4p = this.gameMode === "4p";
           const guestId = is4p ? 3 : 2;
@@ -338,15 +374,26 @@ export class MultiplayerClient {
             team: guestTeam,
             mode: this.gameMode,
             players,
-            bet: this.currentBet
+            bet: this.currentBet,
+            hostMobile: this.hostMeta?.mobile || "",
+            hostNick: this.hostMeta?.nickName || this.hostName,
+            hostFullName: this.hostMeta?.fullName || this.hostName
           });
-          this.onPlayerJoined({ id: guestId, team: guestTeam, name: this.guestName }, players);
+          this.onPlayerJoined({ 
+            id: guestId, 
+            team: guestTeam, 
+            name: this.guestName,
+            mobile: data.mobile || "",
+            nickName: data.nickName || this.guestName,
+            fullName: data.fullName || this.guestName
+          }, players);
         } else {
           this.handleMessage(data);
         }
       });
 
       conn.on("close", () => {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
         this.peerConns.delete(conn);
         this.onPlayerLeft(2, [{ id: 1, team: 1, name: this.hostName }]);
       });
@@ -356,21 +403,22 @@ export class MultiplayerClient {
       console.error("PeerJS Host error:", err);
       if (err.type === "unavailable-id") {
         // Retry with new guaranteed unique code
-        this.createRoom(mode, playerName);
+        this.createRoom(mode, playerName, null, userMeta);
       } else {
         this.onError(`Network error: ${err.message || err.type}`);
       }
     });
   }
 
-  async joinRoom(roomCode, playerName = "Player 2") {
+  async joinRoom(roomCode, playerName = "Player 2", userMeta = null) {
     this.guestName = playerName;
+    this.guestMeta = userMeta;
     const cleanCode = normalizeBoardNumber(roomCode);
 
     if (!this.isP2PPreferred()) {
       try {
         await this.connectWS();
-        this.send({ type: "JOIN_ROOM", roomCode: cleanCode, playerName });
+        this.send({ type: "JOIN_ROOM", roomCode: cleanCode, playerName, userMeta });
         return;
       } catch (e) {
         console.log("WS failed, switching to P2P WebRTC:", e);
@@ -383,12 +431,20 @@ export class MultiplayerClient {
       try { this.peer.destroy(); } catch (_) {}
     }
 
-    this.peer = new Peer();
+    this.peer = new Peer(null, PEER_CONFIG);
 
     this.peer.on("open", () => {
       const targetPeerId = `bk-board-${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
       const conn = this.peer.connect(targetPeerId, { reliable: true });
       this.peerConn = conn;
+
+      // Start 3-second heartbeat ping
+      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = setInterval(() => {
+        if (conn.open) {
+          try { conn.send({ type: "HEARTBEAT_PING", t: Date.now() }); } catch (_) {}
+        }
+      }, 3000);
 
       conn.on("open", () => {
         this.connected = true;
@@ -396,15 +452,26 @@ export class MultiplayerClient {
         conn.send({
           type: "JOIN_ROOM",
           roomCode: cleanCode,
-          playerName
+          playerName,
+          mobile: this.guestMeta?.mobile || "",
+          nickName: this.guestMeta?.nickName || playerName,
+          fullName: this.guestMeta?.fullName || playerName
         });
       });
 
       conn.on("data", (data) => {
+        if (data.type === "HEARTBEAT_PING") {
+          try { conn.send({ type: "HEARTBEAT_PONG" }); } catch (_) {}
+          return;
+        }
+        if (data.type === "HEARTBEAT_PONG") {
+          return;
+        }
         this.handleMessage(data);
       });
 
       conn.on("close", () => {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
         this.connected = false;
         this.onStatusChange("disconnected");
         this.onError("Room host has disconnected.");

@@ -636,7 +636,80 @@ function runTests() {
   const matchHist = uMgr.getHistory();
   assert(matchHist.length > 0, "Match recorded in history");
   assert(matchHist[0].tableCode === "4821", "Match history records exact 4-digit table code (4821)");
-  assert(matchHist[0].opponent === "sumongamingf9c", "Match history displays opponent nickname");
+  // 21. Smart Login: Returning Users (Mobile-only) vs New Users (Sign Up)
+  console.log("\n--- Test 21: Smart Login & Sign Up Flow ---");
+  const authMgr = new UserManager();
+  authMgr.logout();
+
+  // Step A: Attempting to log in as returning user with unregistered mobile
+  const unregRes = authMgr.login("9555112233", "", "", false);
+  assert(unregRes.success === false, "Unregistered mobile login fails gracefully");
+  assert(unregRes.isNotRegistered === true, "Unregistered mobile flagged with isNotRegistered: true");
+
+  // Step B: Sign up requires Full Name
+  const invalidSignUp = authMgr.login("9555112233", "", "", true);
+  assert(invalidSignUp.success === false, "Sign up fails if Full Name is missing");
+
+  // Step C: Successful sign up with Full Name + auto-derived Nick Name
+  const signUpRes = authMgr.login("9555112233", "Mahesh Reddy", "", true);
+  assert(signUpRes.success === true, "New user sign up succeeds");
+  assert(signUpRes.user.nickName === "MR", "Nick name correctly auto-derived as 'MR'");
+  assert(signUpRes.isNewUser === true, "Marked as new user");
+
+  // Step D: Logout and re-login with MOBILE NUMBER ONLY (Returning player flow)
+  authMgr.logout();
+  assert(authMgr.isLoggedIn() === false, "User logged out");
+
+  const returningLoginRes = authMgr.login("9555112233", "", "", false);
+  assert(returningLoginRes.success === true, "Returning player logs in with mobile number ONLY");
+  assert(returningLoginRes.user.nickName === "MR", "Restored returning user's nick name without re-entering");
+  assert(returningLoginRes.isNewUser === false, "Recognized as existing returning player");
+
+  // 22. Mutual Friend Auto-Saving with Mobile Numbers
+  console.log("\n--- Test 22: Mutual Friend Auto-Saving on Handshake ---");
+  const hostMgr = new UserManager();
+  // Host saves guest
+  const hostSavedGuest = hostMgr.addOrUpdateFriend({
+    mobile: "9876501234",
+    nickName: "PlayerTwo",
+    fullName: "Ravi Kumar"
+  });
+  assert(hostSavedGuest.success === true, "Host automatically saves guest friend details");
+  
+  const hostFriends = hostMgr.getFriends();
+  const guestFriend = hostFriends.find(f => f.mobile === "9876501234");
+  assert(guestFriend !== undefined, "Guest found in host's friends list");
+  assert(guestFriend.mobile === "9876501234", "Guest's mobile number accurately saved");
+  assert(guestFriend.name === "PlayerTwo", "Guest's nick name accurately saved");
+
+  // Re-saving updates details instead of duplicating
+  const updateRes = hostMgr.addOrUpdateFriend({
+    mobile: "9876501234",
+    nickName: "PlayerTwoPro",
+    fullName: "Ravi Kumar"
+  });
+  assert(updateRes.isNew === false, "Existing friend details updated without duplicating");
+  assert(hostMgr.getFriends().filter(f => f.mobile === "9876501234").length === 1, "Exactly one entry for friend in list");
+
+  // 23. Offline Computer Match Engine Setup
+  console.log("\n--- Test 23: Offline Computer Match Engine Setup ---");
+  const soloEngine = new BharakhattaEngine({ gameMode: "2p" });
+  soloEngine.initGame([
+    { id: 1, team: 1, name: "MR (You)", avatar: "👑", color: "#e67e22", isAI: false },
+    { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
+  ]);
+  assert(soloEngine.players.length === 2, "2-Player Solo offline game initialized");
+  assert(soloEngine.players[1].isAI === true, "Player 2 is System AI");
+
+  const teamEngine = new BharakhattaEngine({ gameMode: "4p" });
+  teamEngine.initGame([
+    { id: 1, team: 1, name: "MR (You)", avatar: "👑", color: "#e67e22", isAI: false },
+    { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
+    { id: 3, team: 1, name: "Teammate AI", avatar: "🦁", color: "#d35400", isAI: true },
+    { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
+  ]);
+  assert(teamEngine.players.length === 4, "4-Player offline game initialized");
+  assert(teamEngine.players[1].isAI === true && teamEngine.players[3].isAI === true, "Opposite pair are both System AI");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);

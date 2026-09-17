@@ -16,6 +16,7 @@ import { MultiplayerClient, generateUnique4DigitTableCode } from "./game/multipl
 import { wallet } from "./game/wallet.js";
 import { userManager, computeNickName } from "./game/userManager.js";
 import { renderLoginModal } from "./components/LoginModal.js";
+import { renderComputerMatchModal } from "./components/ComputerMatchModal.js";
 import { renderProfileHistoryModal } from "./components/ProfileHistoryModal.js";
 import { renderExitConfirmModal, renderInactivityModal } from "./components/ExitModal.js";
 import { renderGatePromptModal } from "./components/GatePromptModal.js";
@@ -38,6 +39,10 @@ class BharakhattaApp {
     this.betModalOpen = false;
     this.gatePromptOpen = false;
     this.loginModalOpen = !userManager.isLoggedIn();
+    this.loginTab = "login";
+    this.computerModalOpen = false;
+    this.computerPlayerCount = 2;
+    this.computerBet = 250;
     this.inLobby = userManager.isLoggedIn();
     this.playerCount = 2; // 2 or 4 players
     this.lobbyMode = "solo";
@@ -588,6 +593,15 @@ class BharakhattaApp {
     this.engine.initGame(players);
     this.turnTimer.start();
 
+    // Mutual friend exchange: Save host details on guest device
+    if (data.hostMobile) {
+      userManager.addOrUpdateFriend({
+        mobile: data.hostMobile,
+        nickName: data.hostNick || "Host",
+        fullName: data.hostFullName || data.hostNick || "Host"
+      });
+    }
+
     // Direct game auto-start per user requirement (no start button required):
     this.inLobby = false;
     this.joinRoomModalOpen = false;
@@ -599,7 +613,7 @@ class BharakhattaApp {
     this.celebrationSplash = {
       isOpen: true,
       tableCode: data.roomCode,
-      friendName: "Host"
+      friendName: data.hostNick || "Host"
     };
 
     const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
@@ -619,6 +633,15 @@ class BharakhattaApp {
     sounds.playBonusRoll();
     this.turnTimer.reset();
 
+    // Mutual friend exchange: Save guest details on host device
+    if (player.mobile) {
+      userManager.addOrUpdateFriend({
+        mobile: player.mobile,
+        nickName: player.nickName || player.name || "Friend",
+        fullName: player.fullName || player.name || "Friend"
+      });
+    }
+
     // Direct game auto-start on host screen:
     this.inLobby = false;
     this.createRoomModalOpen = false;
@@ -630,7 +653,7 @@ class BharakhattaApp {
     this.celebrationSplash = {
       isOpen: true,
       tableCode: this.mpState.roomCode,
-      friendName: player.name
+      friendName: player.nickName || player.name || "Friend"
     };
 
     if (this.mpState.isHost && this.mpClient) {
@@ -784,7 +807,7 @@ class BharakhattaApp {
 
     let modalsHtml = "";
     if (this.loginModalOpen) {
-      modalsHtml += renderLoginModal(true, "", "", "", this.loginError);
+      modalsHtml += renderLoginModal(true, "", "", "", this.loginError, this.loginTab);
     } else if (this.inLobby) {
       modalsHtml += renderLobbyView({
         user: userManager.getCurrentUser(),
@@ -793,6 +816,14 @@ class BharakhattaApp {
         playerCount: this.playerCount,
         selectedMode: this.lobbyMode,
         hourlyRewardStatus: userManager.getHourlyRewardStatus()
+      });
+    }
+
+    if (this.computerModalOpen) {
+      modalsHtml += renderComputerMatchModal(true, {
+        playerCount: this.computerPlayerCount,
+        selectedBet: this.computerBet,
+        walletCoins: wallet.getBalance()
       });
     }
 
@@ -1340,6 +1371,43 @@ class BharakhattaApp {
       };
     }
 
+    // Login Tab Switching (Login vs Sign Up)
+    const tabLoginBtn = document.getElementById("tab-login-btn");
+    const tabSignupBtn = document.getElementById("tab-signup-btn");
+    const linkSwitchSignup = document.getElementById("link-switch-signup");
+    const linkSwitchLogin = document.getElementById("link-switch-login");
+
+    if (tabLoginBtn) {
+      tabLoginBtn.onclick = () => {
+        this.loginTab = "login";
+        this.loginError = null;
+        this.render();
+      };
+    }
+    if (tabSignupBtn) {
+      tabSignupBtn.onclick = () => {
+        this.loginTab = "signup";
+        this.loginError = null;
+        this.render();
+      };
+    }
+    if (linkSwitchSignup) {
+      linkSwitchSignup.onclick = (e) => {
+        e.preventDefault();
+        this.loginTab = "signup";
+        this.loginError = null;
+        this.render();
+      };
+    }
+    if (linkSwitchLogin) {
+      linkSwitchLogin.onclick = (e) => {
+        e.preventDefault();
+        this.loginTab = "login";
+        this.loginError = null;
+        this.render();
+      };
+    }
+
     // Login Submission & Live Nickname Preview
     const btnSubmitLogin = document.getElementById("btn-submit-login");
     const inputLoginMobile = document.getElementById("input-login-mobile");
@@ -1358,22 +1426,46 @@ class BharakhattaApp {
 
     const doLogin = () => {
       if (!inputLoginMobile) return;
-      const mob = inputLoginMobile.value;
-      const fullName = inputLoginFull ? inputLoginFull.value : "";
-      const nickName = inputLoginNick ? inputLoginNick.value : "";
-      const res = userManager.login(mob, fullName, nickName);
-      if (res.success) {
-        this.loginModalOpen = false;
-        this.loginError = null;
-        this.inLobby = true; // Enter lobby so user selects pot coins before starting game!
-        if (this.engine.players && this.engine.players[0]) {
-          this.engine.players[0].name = res.user.nickName || res.user.name;
+      const mob = inputLoginMobile.value.trim();
+
+      if (this.loginTab === "login") {
+        // Returning user: Login with Mobile Number only!
+        const res = userManager.login(mob, "", "", false);
+        if (res.success) {
+          this.loginModalOpen = false;
+          this.loginError = null;
+          this.inLobby = true;
+          if (this.engine.players && this.engine.players[0]) {
+            this.engine.players[0].name = res.user.nickName || res.user.name;
+          }
+          this.engine.log(`👤 Welcome back, ${res.user.nickName || res.user.name}! Profile restored.`);
+          this.render();
+        } else {
+          this.loginError = res.error;
+          if (res.isNotRegistered) {
+            // Auto-switch to Sign Up tab so user can enter full name
+            this.loginTab = "signup";
+          }
+          this.render();
         }
-        this.engine.log(`👤 Logged in as ${res.user.nickName || res.user.name}. ${res.isNewUser ? "🪙1,000 joining bonus credited!" : "Profile & history restored."}`);
-        this.render();
       } else {
-        this.loginError = res.error;
-        this.render();
+        // New user: Sign up with Mobile + Full Name + Nick Name (optional)
+        const fullName = inputLoginFull ? inputLoginFull.value.trim() : "";
+        const nickName = inputLoginNick ? inputLoginNick.value.trim() : "";
+        const res = userManager.login(mob, fullName, nickName, true);
+        if (res.success) {
+          this.loginModalOpen = false;
+          this.loginError = null;
+          this.inLobby = true;
+          if (this.engine.players && this.engine.players[0]) {
+            this.engine.players[0].name = res.user.nickName || res.user.name;
+          }
+          this.engine.log(`👤 Welcome, ${res.user.nickName || res.user.name}! 🪙1,000 joining bonus credited!`);
+          this.render();
+        } else {
+          this.loginError = res.error;
+          this.render();
+        }
       }
     };
 
@@ -1394,7 +1486,124 @@ class BharakhattaApp {
       };
     }
 
-    // Lobby View Listeners: Player Count Selection (2 or 4 Players)
+    // Modern Home Menu: 3 Hero Mode Cards
+    const btnModeComputer = document.getElementById("btn-mode-computer");
+    if (btnModeComputer) {
+      btnModeComputer.onclick = () => {
+        this.computerModalOpen = true;
+        this.render();
+      };
+    }
+
+    const btnModeOnline = document.getElementById("btn-mode-online");
+    if (btnModeOnline) {
+      btnModeOnline.onclick = async () => {
+        this.current4DigitCode = generateUnique4DigitTableCode();
+        const user = userManager.getCurrentUser();
+        const myName = user ? (user.nickName || user.name) : "Player 1";
+        const userMeta = {
+          mobile: user?.mobile || "",
+          nickName: user?.nickName || myName,
+          fullName: user?.name || myName
+        };
+        await this.mpClient.createRoom("2p", myName, this.current4DigitCode, userMeta);
+        this.createRoomModalOpen = true;
+        this.render();
+      };
+    }
+
+    const btnModeFriends = document.getElementById("btn-mode-friends");
+    if (btnModeFriends) {
+      btnModeFriends.onclick = () => {
+        this.friendsHubOpen = true;
+        this.render();
+      };
+    }
+
+    const btnLobbyFriendsDirect = document.getElementById("btn-lobby-friends-direct");
+    if (btnLobbyFriendsDirect) {
+      btnLobbyFriendsDirect.onclick = () => {
+        this.friendsHubOpen = true;
+        this.render();
+      };
+    }
+
+    // Computer Match Modal Listeners
+    const btnCloseComputerModal = document.getElementById("btn-close-computer-modal");
+    if (btnCloseComputerModal) {
+      btnCloseComputerModal.onclick = () => {
+        this.computerModalOpen = false;
+        this.render();
+      };
+    }
+
+    const btnCmFormat2p = document.getElementById("btn-cm-format-2p");
+    const btnCmFormat4p = document.getElementById("btn-cm-format-4p");
+    if (btnCmFormat2p) {
+      btnCmFormat2p.onclick = () => {
+        this.computerPlayerCount = 2;
+        this.render();
+      };
+    }
+    if (btnCmFormat4p) {
+      btnCmFormat4p.onclick = () => {
+        this.computerPlayerCount = 4;
+        this.render();
+      };
+    }
+
+    document.querySelectorAll(".btn-cm-bet").forEach(chip => {
+      chip.onclick = () => {
+        const bet = parseInt(chip.getAttribute("data-bet"), 10);
+        if (bet) {
+          this.computerBet = bet;
+          this.render();
+        }
+      };
+    });
+
+    const btnStartComputerGame = document.getElementById("btn-start-computer-game");
+    if (btnStartComputerGame) {
+      btnStartComputerGame.onclick = () => {
+        if (!wallet.canAfford(this.computerBet)) {
+          alert(`You need 🪙${this.computerBet.toLocaleString()} coins! Current balance: 🪙${wallet.getBalance().toLocaleString()}`);
+          return;
+        }
+        wallet.placeBet(this.computerBet);
+        this.currentBet = this.computerBet;
+        this.matchPot = this.computerBet * 2;
+        this.inLobby = false;
+        this.computerModalOpen = false;
+
+        const user = userManager.getCurrentUser();
+        const myName = user ? (user.nickName || user.name) : "Player 1";
+
+        if (this.computerPlayerCount === 4) {
+          this.engine.gameMode = "4p";
+          this.engine.initGame([
+            { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
+            { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
+            { id: 3, team: 1, name: "Teammate AI", avatar: "🦁", color: "#d35400", isAI: true },
+            { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
+          ]);
+          this.winnerAwarded = false;
+          this.turnTimer.start();
+          this.engine.log(`🎲 4-Player Offline match vs System AI Pair started! Pot: 🪙${this.matchPot.toLocaleString()}`);
+        } else {
+          this.engine.gameMode = "2p";
+          this.engine.initGame([
+            { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
+            { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
+          ]);
+          this.winnerAwarded = false;
+          this.turnTimer.start();
+          this.engine.log(`🎲 2-Player Offline match vs System AI started! Pot: 🪙${this.matchPot.toLocaleString()}`);
+        }
+        this.render();
+      };
+    }
+
+    // Legacy / Fallback lobby mode selection listeners
     const btnCount2p = document.getElementById("btn-count-2p");
     const btnCount4p = document.getElementById("btn-count-4p");
     if (btnCount2p) {
@@ -1412,7 +1621,6 @@ class BharakhattaApp {
       };
     }
 
-    // Lobby Match Mode Selection
     const btnModeSolo = document.getElementById("btn-select-mode-solo");
     const btnModeFriend = document.getElementById("btn-select-mode-friend");
     const btnMode4pPair = document.getElementById("btn-select-mode-4p-pair");
@@ -1509,7 +1717,12 @@ class BharakhattaApp {
         this.current4DigitCode = generateUnique4DigitTableCode();
         const user = userManager.getCurrentUser();
         const myName = user ? (user.nickName || user.name) : "Player 1";
-        await this.mpClient.createRoom(this.roomCreationMode, myName, this.current4DigitCode);
+        const userMeta = {
+          mobile: user?.mobile || "",
+          nickName: user?.nickName || myName,
+          fullName: user?.name || myName
+        };
+        await this.mpClient.createRoom(this.roomCreationMode, myName, this.current4DigitCode, userMeta);
         this.createRoomModalOpen = true;
         this.render();
       };
@@ -1579,7 +1792,12 @@ class BharakhattaApp {
         this.current4DigitCode = generateUnique4DigitTableCode();
         const user = userManager.getCurrentUser();
         const myName = user ? (user.nickName || user.name) : "Player 1";
-        await this.mpClient.createRoom("2p", myName, this.current4DigitCode);
+        const userMeta = {
+          mobile: user?.mobile || "",
+          nickName: user?.nickName || myName,
+          fullName: user?.name || myName
+        };
+        await this.mpClient.createRoom("2p", myName, this.current4DigitCode, userMeta);
         this.createRoomModalOpen = true;
         this.engine.log(`⚔️ Challenged ${friendName} to Table #${this.current4DigitCode}!`);
         this.render();
@@ -1733,9 +1951,14 @@ class BharakhattaApp {
 
       const user = userManager.getCurrentUser();
       const myName = user ? (user.nickName || user.name) : "Player 2";
+      const userMeta = {
+        mobile: user?.mobile || "",
+        nickName: user?.nickName || myName,
+        fullName: user?.name || myName
+      };
       this.joinRoomError = null;
       try {
-        await this.mpClient.joinRoom(code, myName);
+        await this.mpClient.joinRoom(code, myName, userMeta);
       } catch (err) {
         this.joinRoomError = err.message || "Failed to connect to table.";
         this.render();
