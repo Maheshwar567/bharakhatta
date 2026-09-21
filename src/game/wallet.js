@@ -15,6 +15,16 @@ export class WalletManager {
 
   loadBalance() {
     try {
+      const activeMobile = localStorage.getItem('bk_current_user_mobile');
+      if (activeMobile) {
+        const userRaw = localStorage.getItem(`bk_user_${activeMobile}`);
+        if (userRaw) {
+          const user = JSON.parse(userRaw);
+          if (typeof user.walletBalance === 'number' && user.walletBalance >= 0) {
+            return user.walletBalance;
+          }
+        }
+      }
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved !== null) {
         const parsed = parseInt(saved, 10);
@@ -33,6 +43,15 @@ export class WalletManager {
   saveBalance() {
     try {
       localStorage.setItem(STORAGE_KEY, this.balance.toString());
+      const activeMobile = localStorage.getItem('bk_current_user_mobile');
+      if (activeMobile) {
+        const userRaw = localStorage.getItem(`bk_user_${activeMobile}`);
+        if (userRaw) {
+          const user = JSON.parse(userRaw);
+          user.walletBalance = this.balance;
+          localStorage.setItem(`bk_user_${activeMobile}`, JSON.stringify(user));
+        }
+      }
     } catch (_) {}
   }
 

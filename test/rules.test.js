@@ -53,10 +53,10 @@ function runTests() {
   assert(roll4.score === 4 && roll4.isBonus === false && roll4.releasesCoins === 0, "Roll 4 is Naalugu, no bonus, no release");
 
   const roll5 = dice.roll(5);
-  assert(roll5.score === 5 && roll5.isBonus === true && roll5.releasesCoins === 1, "Roll 5 is Aidu, grants bonus and releases 1 coin");
+  assert(roll5.score === 5 && roll5.isBonus === true && roll5.releasesCoins === 5, "Roll 5 is Aidu, grants bonus and releases 5 coins");
 
   const roll6 = dice.roll(6);
-  assert(roll6.score === 6 && roll6.isBonus === true && roll6.releasesCoins === 1, "Roll 6 is Aaru, grants bonus and releases 1 coin");
+  assert(roll6.score === 6 && roll6.isBonus === true && roll6.releasesCoins === 6, "Roll 6 is Aaru, grants bonus and releases 6 coins");
 
   const roll12 = dice.roll(12);
   assert(roll12.score === 12 && roll12.isBonus === true && roll12.releasesCoins === 0, "Roll 12 (all backs) is Baara!, grants bonus, releases 0 coins");
@@ -111,14 +111,38 @@ function runTests() {
 
   // Rolls 1, 5, and 6 allow releasing coins from jail per latest rules
   const movesRoll5 = engine.getLegalMoves(1, 5);
-  assert(movesRoll5.length === 1 && movesRoll5[0].type === "RELEASE_JAIL", "Roll of 5 with all coins in jail gives RELEASE_JAIL move");
+  assert(movesRoll5.length === 1 && movesRoll5[0].type === "RELEASE_JAIL" && movesRoll5[0].count === 5, "Roll of 5 with all 6 coins in jail gives RELEASE_JAIL with count 5");
 
   const movesRoll6 = engine.getLegalMoves(1, 6);
-  assert(movesRoll6.length === 1 && movesRoll6[0].type === "RELEASE_JAIL", "Roll of 6 with all coins in jail gives RELEASE_JAIL move");
+  assert(movesRoll6.length === 1 && movesRoll6[0].type === "RELEASE_JAIL" && movesRoll6[0].count === 6, "Roll of 6 with all 6 coins in jail gives RELEASE_JAIL with count 6");
 
-  // Roll 1 should allow releasing exactly 1 coin
+  // Roll 1 allows releasing exactly 1 coin
   const movesRoll1 = engine.getLegalMoves(1, 1);
   assert(movesRoll1.length === 1 && movesRoll1[0].type === "RELEASE_JAIL" && movesRoll1[0].count === 1, "Roll of 1 allows releasing 1 coin from jail");
+
+  // Verify conditional release rules when jail count drops:
+  // With 5 coins in jail (1 coin already active):
+  const jailTestEngine = new BharakhattaEngine({ gameMode: "2p" });
+  jailTestEngine.initGame(null, 1);
+  // Release 1 coin
+  const c1 = jailTestEngine.coins.find(c => c.team === 1 && c.num === 1);
+  c1.inJail = false;
+  c1.stepIndex = 0;
+  // Now Team 1 has 5 coins in jail, 1 active
+  const moves5InJailRoll6 = jailTestEngine.getLegalMoves(1, 6);
+  assert(!moves5InJailRoll6.some(m => m.type === "RELEASE_JAIL"), "Roll of 6 with 5 coins in jail cannot release from jail (only moves active coin)");
+  const moves5InJailRoll5 = jailTestEngine.getLegalMoves(1, 5);
+  assert(moves5InJailRoll5.some(m => m.type === "RELEASE_JAIL" && m.count === 5), "Roll of 5 with 5 coins in jail CAN release 5 coins");
+  const moves5InJailRoll1 = jailTestEngine.getLegalMoves(1, 1);
+  assert(moves5InJailRoll1.some(m => m.type === "RELEASE_JAIL" && m.count === 1) && moves5InJailRoll1.some(m => m.type === "MOVE_COIN"), "Roll of 1 with 5 in jail gives user choice: release 1 OR move active coin");
+  assert(jailTestEngine.getSingleMovableMove(moves5InJailRoll1) === null, "Player choice preserved: getSingleMovableMove returns null when both release and move exist");
+
+  // With 4 coins in jail (2 coins active):
+  const c2 = jailTestEngine.coins.find(c => c.team === 1 && c.num === 2);
+  c2.inJail = false;
+  c2.stepIndex = 1;
+  const moves4InJailRoll5 = jailTestEngine.getLegalMoves(1, 5);
+  assert(!moves4InJailRoll5.some(m => m.type === "RELEASE_JAIL"), "Roll of 5 with 4 coins in jail CANNOT release (needs at least 5 in jail)");
 
   // Dynamic Home Selection Test:
   const dynamicEngine = new BharakhattaEngine({ gameMode: "2p" });
@@ -777,6 +801,49 @@ function runTests() {
   forfeitEngine2.forfeit(1);
   assert(forfeitEngine2.winner !== null && forfeitEngine2.winner.team === 2, "Team 2 awarded default victory when Team 1 quits");
   assert(forfeitEngine2.winner.reason === "OPPONENT_QUIT", "Win reason recorded as 'OPPONENT_QUIT'");
+
+  // 27. BoardView Exclusive 2 Active Homes & 2 Gate 23s Display
+  console.log("\n--- Test 27: BoardView Exclusive 2 Active Homes & 2 Gate 23s Display ---");
+  const boardEngine = new BharakhattaEngine({ gameMode: "2p" });
+  boardEngine.initGame(null, 1); // Team 1 = Home 1 (East), Team 2 = Home 3 (West)
+  const boardExclusiveHtml = renderBoard(boardEngine.getStateSnapshot());
+  assert(boardExclusiveHtml.includes("T1 (H1)") && boardExclusiveHtml.includes("T2 OPPOSITE (H3)"), "Board displays active team home labels (T1 at H1 and T2 at opposite H3)");
+  // Check that unused gates (North 0,4 and South 6,2) are not shown as active gates
+  assert(!boardExclusiveHtml.includes('data-r="0" data-c="4" class="board-cell path-square safe-square gate-square"'), "Gate 23 for unselected Home 2 (North 0,4) is NOT marked as active gate");
+  assert(!boardExclusiveHtml.includes('data-r="6" data-c="2" class="board-cell path-square safe-square gate-square"'), "Gate 23 for unselected Home 4 (South 6,2) is NOT marked as active gate");
+  // Check that active gates (H1: 4,6 and H3: 2,0) are rendered with GATE 23
+  assert(boardExclusiveHtml.includes('data-r="4" data-c="6"') && boardExclusiveHtml.includes('GATE 23'), "Gate 23 for selected Home 1 (East 4,6) is rendered");
+  assert(boardExclusiveHtml.includes('data-r="2" data-c="0"'), "Gate 23 for selected Home 3 (West 2,0) is rendered");
+
+  // 28. Wallet Lifetime Persistence by Mobile Number
+  console.log("\n--- Test 28: Wallet Lifetime Persistence by Mobile Number ---");
+  const umMobile = new UserManager();
+  const regResult = umMobile.login("9887766554", "Ravi Kumar", "Ravi", true);
+  assert(regResult.success === true, "User 9887766554 successfully registered");
+  assert(wallet.getBalance() === 1000, "New user starts with 1000 joining bonus");
+
+  // Claim hourly reward
+  const claimMobileRes = umMobile.claimHourlyReward();
+  assert(claimMobileRes.success === true && claimMobileRes.reward === 500, "Claimed 500 hourly reward coins");
+  assert(wallet.getBalance() === 1500, "Wallet balance is now 1500");
+
+  // Verify profile in localStorage holds 1500
+  const savedUserRaw = globalThis.localStorage.getItem("bk_user_9887766554");
+  assert(savedUserRaw !== null, "User profile exists in localStorage under mobile key");
+  const parsedUser = JSON.parse(savedUserRaw);
+  assert(parsedUser.walletBalance === 1500, "User profile walletBalance accurately persisted as 1500");
+
+  // Place bet of 250
+  wallet.placeBet(250);
+  assert(wallet.getBalance() === 1250, "Wallet after bet is 1250");
+  const afterBetUser = JSON.parse(globalThis.localStorage.getItem("bk_user_9887766554"));
+  assert(afterBetUser.walletBalance === 1250, "Wallet saveBalance directly synchronizes to bk_user_9887766554 in localStorage");
+
+  // Award pot of 500
+  wallet.awardPot(500);
+  assert(wallet.getBalance() === 1750, "Wallet after pot award is 1750");
+  const afterPotUser = JSON.parse(globalThis.localStorage.getItem("bk_user_9887766554"));
+  assert(afterPotUser.walletBalance === 1750, "Wallet awardPot directly synchronizes to user profile");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);

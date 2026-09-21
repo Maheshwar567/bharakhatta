@@ -213,9 +213,13 @@ export class BharakhattaEngine {
 
     this.log(`🎲 ${player.name} rolled ${rollResult.titleEn} (${score})! ${rollResult.isBonus ? "⭐ Bonus Turn Awarded!" : ""}`);
 
-    // If homes not assigned yet and player rolled a release score (1, 5, or 6):
-    const isReleaseScore = score === 1 || score === 5 || score === 6;
-    if (!this.homesAssigned && isReleaseScore) {
+    // If homes not assigned yet and player rolled a valid release score:
+    const jailCoins = this.getJailCoins(teamId);
+    const canReleaseNow = (score === 1 && jailCoins.length >= 1) ||
+                          (score === 5 && jailCoins.length >= 5) ||
+                          (score === 6 && jailCoins.length === 6);
+
+    if (!this.homesAssigned && canReleaseNow) {
       const isHuman = !player.isAI && (!this.isMultiplayer || player.id === this.localPlayerId);
       if (this.onNeedHomeSelection && isHuman) {
         this.status = GAME_STATUS.CHOOSING_HOME;
@@ -278,16 +282,29 @@ export class BharakhattaEngine {
     const jailCoins = this.getJailCoins(teamId);
     const path = this.getTeamPath(teamId);
 
-    // Rule: Can release from jail on roll of 1 (Okkati), 5 (Aidu), or 6 (Aaru)
-    const isReleaseRoll = score === 1 || score === 5 || score === 6;
-    const canReleaseFromJail = isReleaseRoll && jailCoins.length > 0;
+    // Rule:
+    // 1 rolled -> releases 1 coin (if >= 1 in jail)
+    // 5 rolled -> releases 5 coins (if >= 5 in jail)
+    // 6 rolled -> releases 6 coins (if == 6 in jail)
+    let canRelease = false;
+    let releaseCount = 0;
+    if (score === 1 && jailCoins.length >= 1) {
+      canRelease = true;
+      releaseCount = 1;
+    } else if (score === 5 && jailCoins.length >= 5) {
+      canRelease = true;
+      releaseCount = 5;
+    } else if (score === 6 && jailCoins.length === 6) {
+      canRelease = true;
+      releaseCount = 6;
+    }
 
-    if (canReleaseFromJail) {
+    if (canRelease) {
       moves.push({
         type: "RELEASE_JAIL",
         coin: jailCoins[0],
-        count: 1,
-        description: `Release 1 coin (#${jailCoins[0].num}) from Jail to Home base`
+        count: releaseCount,
+        description: `Release ${releaseCount} coin(s) from Jail to Home base`
       });
     }
 
@@ -618,15 +635,19 @@ export class BharakhattaEngine {
     const teamCoins = this.getTeamCoins(currentTeam);
     const activeCoins = teamCoins.filter(c => !c.inJail && !c.isFinished);
 
-    // If exactly 1 coin is out of jail:
-    if (activeCoins.length === 1) {
+    // If player has both a jail release option and a coin move on board, NEVER auto-move!
+    // The player must be given their free choice to release from jail or move the active coin.
+    const hasJailRelease = this.validMoves.some(m => m.type === "RELEASE_JAIL");
+    const hasCoinMoves = this.validMoves.some(m => m.type === "MOVE_COIN" || m.type === "FINISH_COIN");
+    if (hasJailRelease && hasCoinMoves) {
+      return null;
+    }
+
+    // If exactly 1 coin is out of jail and no jail release choice exists:
+    if (activeCoins.length === 1 && !hasJailRelease) {
       const coinMoves = this.validMoves.filter(m => m.type === "MOVE_COIN" || m.type === "FINISH_COIN");
-      // If no jail release option exists (e.g. roll was not 1):
-      if (coinMoves.length === 1 && !this.validMoves.some(m => m.type === "RELEASE_JAIL")) {
+      if (coinMoves.length === 1) {
         return coinMoves[0];
-      }
-      if (this.validMoves.length === 1) {
-        return this.validMoves[0];
       }
     }
 

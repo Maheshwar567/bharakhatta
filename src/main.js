@@ -771,6 +771,42 @@ class BharakhattaApp {
     }, 1500);
   }
 
+  async submitJoinTableCode(rawCode) {
+    if (this.isJoiningTable) return;
+    const code = (rawCode || this.enteredJoinCode || "").toString().trim().replace(/[^0-9]/g, "").slice(0, 4);
+    if (!code || code.length !== 4) {
+      this.joinRoomError = "Please enter a valid 4-digit code (e.g. 4821).";
+      this.render();
+      return;
+    }
+
+    this.isJoiningTable = true;
+    this.joinRoomError = null;
+    this.render();
+
+    const user = userManager.getCurrentUser();
+    const myName = user ? (user.nickName || user.name) : "Player 2";
+    const userMeta = {
+      mobile: user?.mobile || "",
+      nickName: user?.nickName || myName,
+      fullName: user?.name || myName
+    };
+
+    try {
+      if (this.mpClient.isHost || this.mpState.isHost) {
+        this.mpClient.leaveRoom();
+        this.mpState.roomCode = null;
+        this.mpState.isHost = false;
+      }
+      await this.mpClient.joinRoom(code, myName, userMeta);
+    } catch (err) {
+      this.joinRoomError = err.message || "Failed to connect to table.";
+    } finally {
+      this.isJoiningTable = false;
+      this.render();
+    }
+  }
+
   handlePlayerJoined(player, players) {
     this.mpState.players = players;
     this.engine.log(`🎉 ${player.name} connected to Table #${this.mpState.roomCode}! Starting match directly...`);
@@ -1010,6 +1046,7 @@ class BharakhattaApp {
         shareUrl,
         joinCode: this.enteredJoinCode || '',
         joinError: this.joinRoomError || null,
+        isJoining: this.isJoiningTable || false,
         hourlyRewardStatus
       });
     }
@@ -1032,7 +1069,8 @@ class BharakhattaApp {
     if (this.joinRoomModalOpen) {
       modalsHtml += renderJoinRoomModal(true, {
         errorMsg: this.joinRoomError,
-        enteredCode: this.enteredJoinCode
+        enteredCode: this.enteredJoinCode,
+        isJoining: this.isJoiningTable || false
       });
     }
 
@@ -1914,8 +1952,18 @@ class BharakhattaApp {
     // Friends Hub Sub-Tabs
     document.querySelectorAll("[data-fhub-tab]").forEach(tabBtn => {
       tabBtn.onclick = () => {
-        this.friendsTab = tabBtn.getAttribute("data-fhub-tab");
-        this.render();
+        const nextTab = tabBtn.getAttribute("data-fhub-tab");
+        if (this.friendsTab !== nextTab) {
+          this.friendsTab = nextTab;
+          if (nextTab === "join") {
+            if (this.mpState.isHost && this.mpState.players.length <= 1) {
+              if (this.mpClient) this.mpClient.leaveRoom();
+              this.mpState.roomCode = null;
+              this.mpState.isHost = false;
+            }
+          }
+          this.render();
+        }
       };
     });
 
@@ -1966,40 +2014,74 @@ class BharakhattaApp {
       };
     });
 
-    // Friends Hub Tab 2: Join Table Controls
+    // Friends Hub & Join Table PIN / Keypad Controls
     const input4Digit = document.getElementById("input-4digit-code");
     const btnSubmitJoin = document.getElementById("btn-submit-join-code");
     if (input4Digit) {
       input4Digit.oninput = (e) => {
         this.enteredJoinCode = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+        this.render();
       };
       input4Digit.onkeydown = (e) => {
         if (e.key === "Enter") {
-          if (btnSubmitJoin) btnSubmitJoin.click();
+          this.submitJoinTableCode(this.enteredJoinCode || input4Digit.value);
         }
       };
     }
-    if (btnSubmitJoin) {
-      btnSubmitJoin.onclick = async () => {
-        const code = (this.enteredJoinCode || input4Digit?.value || "").trim();
-        if (!code || code.length < 4) {
-          this.joinRoomError = "Please enter a valid 4-digit code.";
-          this.render();
-          return;
+
+    // Virtual Touch Keypad for Frictionless Input
+    document.querySelectorAll(".btn-fhub-keypad-key[data-join-key]").forEach(keyBtn => {
+      keyBtn.onclick = () => {
+        const key = keyBtn.getAttribute("data-join-key");
+        if (!this.enteredJoinCode) this.enteredJoinCode = "";
+        if (key === "clear") {
+          this.enteredJoinCode = "";
+          this.joinRoomError = null;
+        } else if (key === "back") {
+          this.enteredJoinCode = this.enteredJoinCode.slice(0, -1);
+          this.joinRoomError = null;
+        } else if (/^[0-9]$/.test(key)) {
+          if (this.enteredJoinCode.length < 4) {
+            this.enteredJoinCode += key;
+            this.joinRoomError = null;
+          }
         }
-        const user = userManager.getCurrentUser();
-        const myName = user ? (user.nickName || user.name) : "Player 2";
-        const userMeta = {
-          mobile: user?.mobile || "",
-          nickName: user?.nickName || myName,
-          fullName: user?.name || myName
-        };
+        this.render();
+      };
+    });
+
+    // Paste from Clipboard Button
+    const btnPasteJoinCode = document.getElementById("btn-paste-join-code");
+    if (btnPasteJoinCode) {
+      btnPasteJoinCode.onclick = async () => {
         try {
-          await this.mpClient.joinRoom(code, myName, userMeta);
+          if (navigator.clipboard?.readText) {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              const match = text.match(/\b\d{4}\b/);
+              if (match) {
+                this.enteredJoinCode = match[0];
+                this.joinRoomError = null;
+                this.render();
+              } else {
+                const digits = text.replace(/[^0-9]/g, "").slice(0, 4);
+                if (digits.length > 0) {
+                  this.enteredJoinCode = digits;
+                  this.joinRoomError = null;
+                  this.render();
+                }
+              }
+            }
+          }
         } catch (err) {
-          this.joinRoomError = err.message || "Failed to join table.";
-          this.render();
+          console.warn("Could not read clipboard:", err);
         }
+      };
+    }
+
+    if (btnSubmitJoin) {
+      btnSubmitJoin.onclick = () => {
+        this.submitJoinTableCode(this.enteredJoinCode || input4Digit?.value);
       };
     }
 
@@ -2207,39 +2289,23 @@ class BharakhattaApp {
       };
     }
 
-    const input4DigitCode = document.getElementById("input-4digit-code");
-    const btnSubmitJoinCode = document.getElementById("btn-submit-join-code");
-
-    const doSubmitJoinCode = async () => {
-      if (!input4DigitCode) return;
-      const code = input4DigitCode.value.trim();
-      if (!code || code.length !== 4) {
-        this.joinRoomError = "Please enter a valid 4-digit code (e.g. 4821).";
-        this.render();
-        return;
+    if (this.joinRoomModalOpen) {
+      const input4DigitCode = document.getElementById("input-4digit-code");
+      const btnSubmitJoinCode = document.getElementById("btn-submit-join-code");
+      if (input4DigitCode) {
+        input4DigitCode.oninput = (e) => {
+          this.enteredJoinCode = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+          this.render();
+        };
+        input4DigitCode.onkeydown = (e) => {
+          if (e.key === "Enter") this.submitJoinTableCode(this.enteredJoinCode || input4DigitCode.value);
+        };
       }
-
-      const user = userManager.getCurrentUser();
-      const myName = user ? (user.nickName || user.name) : "Player 2";
-      const userMeta = {
-        mobile: user?.mobile || "",
-        nickName: user?.nickName || myName,
-        fullName: user?.name || myName
-      };
-      this.joinRoomError = null;
-      try {
-        await this.mpClient.joinRoom(code, myName, userMeta);
-      } catch (err) {
-        this.joinRoomError = err.message || "Failed to connect to table.";
-        this.render();
+      if (btnSubmitJoinCode) {
+        btnSubmitJoinCode.onclick = () => {
+          this.submitJoinTableCode(this.enteredJoinCode || input4DigitCode?.value);
+        };
       }
-    };
-
-    if (btnSubmitJoinCode) btnSubmitJoinCode.onclick = doSubmitJoinCode;
-    if (input4DigitCode) {
-      input4DigitCode.onkeydown = (e) => {
-        if (e.key === "Enter") doSubmitJoinCode();
-      };
     }
 
     // Add Friend Modal Handlers

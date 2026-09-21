@@ -428,11 +428,13 @@ export class UserManager {
       return { success: false, error: `Hourly reward available in ${mins}m.` };
     }
 
+    wallet.addCoins(500);
+
     if (this.currentUser) {
       this.currentUser.lastHourlyRewardClaim = Date.now();
+      this.currentUser.walletBalance = wallet.getBalance();
       this.saveUserProfile(this.currentUser);
     }
-    wallet.addCoins(500);
 
     return {
       success: true,

@@ -5,8 +5,8 @@ export const SCORE_NAMES = {
   2: { te: "Rendu", en: "Two", isBonus: false, releasesCoins: 0 },
   3: { te: "Moodu", en: "Three", isBonus: false, releasesCoins: 0 },
   4: { te: "Naalugu", en: "Four", isBonus: false, releasesCoins: 0 },
-  5: { te: "Aidu", en: "Five", isBonus: true, releasesCoins: 1 },
-  6: { te: "Aaru", en: "Six", isBonus: true, releasesCoins: 1 },
+  5: { te: "Aidu", en: "Five", isBonus: true, releasesCoins: 5 },
+  6: { te: "Aaru", en: "Six", isBonus: true, releasesCoins: 6 },
   12: { te: "Baara", en: "Twelve (Baara!)", isBonus: true, releasesCoins: 0 }
 };
 

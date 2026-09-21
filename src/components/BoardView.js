@@ -58,33 +58,39 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
         }
       }
 
-      const isH1Gate = (r === 4 && c === 6);
-      const isH2Gate = (r === 0 && c === 4);
-      const isH3Gate = (r === 2 && c === 0);
-      const isH4Gate = (r === 6 && c === 2);
-      const isAnyGate = isH1Gate || isH2Gate || isH3Gate || isH4Gate;
-
+      const isHomesAssigned = !!gameState.homesAssigned;
       const t1Home = gameState.team1Home || 1;
       const t2Home = gameState.team2Home || 3;
+
       let cellHomeId = 0;
       if (r === 3 && c === 6) cellHomeId = 1;
       else if (r === 0 && c === 3) cellHomeId = 2;
       else if (r === 3 && c === 0) cellHomeId = 3;
       else if (r === 6 && c === 3) cellHomeId = 4;
 
-      const isTeam1Home = cellHomeId === t1Home;
-      const isTeam2Home = cellHomeId === t2Home;
+      // Only show the 2 assigned active homes; do not show the other 2 unused homes
+      const isTeam1Home = isHomesAssigned && (cellHomeId === t1Home);
+      const isTeam2Home = isHomesAssigned && (cellHomeId === t2Home);
+
+      const isH1Gate = (r === 4 && c === 6);
+      const isH2Gate = (r === 0 && c === 4);
+      const isH3Gate = (r === 2 && c === 0);
+      const isH4Gate = (r === 6 && c === 2);
+
+      // Only show the 2 Gate 23s that correspond to the active homes; hide the other two
+      const isT1Gate = (t1Home === 1 && isH1Gate) || (t1Home === 2 && isH2Gate) || (t1Home === 3 && isH3Gate) || (t1Home === 4 && isH4Gate);
+      const isT2Gate = (t2Home === 1 && isH1Gate) || (t2Home === 2 && isH2Gate) || (t2Home === 3 && isH3Gate) || (t2Home === 4 && isH4Gate);
+      const isActiveGate = isHomesAssigned && (isT1Gate || isT2Gate);
 
       let cellClasses = ["board-cell"];
       if (isSafe) cellClasses.push("cell-safe-katta");
       if (isCenter) cellClasses.push("cell-center-sanctum");
-      if (cellHomeId === 1) cellClasses.push("cell-home-h1");
-      if (cellHomeId === 2) cellClasses.push("cell-home-h2");
-      if (cellHomeId === 3) cellClasses.push("cell-home-h3");
-      if (cellHomeId === 4) cellClasses.push("cell-home-h4");
-      if (isTeam1Home) cellClasses.push("cell-team1-base");
-      if (isTeam2Home) cellClasses.push("cell-team2-base");
-      if (isAnyGate) cellClasses.push("cell-gate-step23");
+      if (isTeam1Home) {
+        cellClasses.push(`cell-home-h${t1Home}`, "cell-team1-base");
+      } else if (isTeam2Home) {
+        cellClasses.push(`cell-home-h${t2Home}`, "cell-team2-base");
+      }
+      if (isActiveGate) cellClasses.push("cell-gate-step23");
       if (matchingMove) cellClasses.push("cell-valid-target");
 
       // Cell interior content: 'X' marking for safe squares or center emblem
@@ -112,9 +118,8 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
         `;
       } else if (isSafe) {
         let homeLabel = "";
-        if (isTeam1Home) homeLabel = `👑 T1 (H${cellHomeId})`;
-        else if (isTeam2Home) homeLabel = `🦚 T2 OPPOSITE (H${cellHomeId})`;
-        else if (cellHomeId > 0) homeLabel = `H${cellHomeId} SAFE`;
+        if (isTeam1Home) homeLabel = `👑 T1 (H${t1Home})`;
+        else if (isTeam2Home) homeLabel = `🦚 T2 OPPOSITE (H${t2Home})`;
 
         markerHtml = `
           <div class="katta-x-mark">
@@ -122,10 +127,10 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
               <line x1="10" y1="10" x2="90" y2="90" stroke="#8a2512" stroke-width="6" stroke-linecap="round" />
               <line x1="90" y1="10" x2="10" y2="90" stroke="#8a2512" stroke-width="6" stroke-linecap="round" />
             </svg>
-            ${homeLabel ? `<span class="cell-tag ${isTeam1Home ? 'cell-tag-t1' : (isTeam2Home ? 'cell-tag-t2' : '')}">${homeLabel}</span>` : ""}
+            ${homeLabel ? `<span class="cell-tag ${isTeam1Home ? 'cell-tag-t1' : 'cell-tag-t2'}">${homeLabel}</span>` : ""}
           </div>
         `;
-      } else if (isAnyGate) {
+      } else if (isActiveGate) {
         markerHtml = `
           <div class="gate-marker" title="Gate 23: Opponent kill needed to enter inside 5/5 ring!">
             <span class="cell-gate-tag">GATE 23</span>

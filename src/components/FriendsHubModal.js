@@ -19,10 +19,13 @@ export function renderFriendsHubModal(options = {}) {
     shareUrl = "",
     joinCode = "",
     joinError = null,
+    isJoining = false,
     hourlyRewardStatus = { canClaim: true, secondsLeft: 0, rewardAmount: 500 }
   } = options;
 
   if (!isOpen) return "";
+
+  const joinDigits = (joinCode || "").split('');
 
   const formatCountdown = (sec) => {
     const m = Math.floor(sec / 60);
@@ -140,7 +143,7 @@ export function renderFriendsHubModal(options = {}) {
               <div class="table-code-hero-card">
                 <span class="table-code-label">TABLE CODE (SHARE WITH FRIEND)</span>
                 <div class="table-digits-display">
-                  ${(roomCode || "4821").split('').map(digit => `<span class="digit-box">${digit}</span>`).join('')}
+                  ${(roomCode || "4821").split('').map(digit => `<span class="digit-box digit-box-gold">${digit}</span>`).join('')}
                 </div>
                 <div class="table-code-actions">
                   <button class="btn-copy-code" id="btn-copy-4digit-code" data-code="${roomCode || '4821'}">
@@ -162,7 +165,26 @@ export function renderFriendsHubModal(options = {}) {
             <!-- Tab 2: Join Table -->
             <div class="fhub-tab-pane fhub-join-pane">
               <div class="join-code-entry-wrap">
-                <label class="join-code-label" for="input-4digit-code">Enter 4-Digit Table Code:</label>
+                <div class="join-card-header">
+                  <span class="join-header-icon">🚪</span>
+                  <label class="join-code-label" for="input-4digit-code">Enter 4-Digit Table Code</label>
+                  <p class="join-code-sub">Enter the code shared by your friend to join their board</p>
+                </div>
+
+                <!-- 4 Golden PIN Digit Boxes -->
+                <div class="join-pin-row" id="join-pin-display-row">
+                  ${[0, 1, 2, 3].map(i => {
+                    const digit = joinDigits[i] || "";
+                    const isActive = i === joinDigits.length && !isJoining;
+                    return `
+                      <span class="join-pin-box ${digit ? 'pin-filled' : ''} ${isActive ? 'pin-active' : ''}">
+                        ${digit || '•'}
+                      </span>
+                    `;
+                  }).join('')}
+                </div>
+
+                <!-- Hidden/Transparent Input for Physical Keyboard & Autofill -->
                 <input 
                   type="text" 
                   id="input-4digit-code" 
@@ -176,10 +198,31 @@ export function renderFriendsHubModal(options = {}) {
                   autofocus
                 />
 
+                <!-- Quick Action: Paste from Clipboard -->
+                <button type="button" class="btn-paste-code" id="btn-paste-join-code" title="Paste 4-digit code from clipboard">
+                  📋 Paste from Clipboard
+                </button>
+
+                <!-- Touch Keypad for Frictionless Mobile Input -->
+                <div class="join-keypad-grid">
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="1">1</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="2">2</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="3">3</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="4">4</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="5">5</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="6">6</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="7">7</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="8">8</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="9">9</button>
+                  <button type="button" class="btn-fhub-keypad-key btn-keypad-action" data-join-key="clear">CLR</button>
+                  <button type="button" class="btn-fhub-keypad-key" data-join-key="0">0</button>
+                  <button type="button" class="btn-fhub-keypad-key btn-keypad-action" data-join-key="back">⌫</button>
+                </div>
+
                 ${joinError ? `<div class="join-code-error">⚠️ ${joinError}</div>` : ''}
 
-                <button class="btn-glossy-green btn-submit-join" id="btn-submit-join-code">
-                  🚀 Join Table & Play
+                <button class="btn-glossy-green btn-submit-join ${isJoining ? 'btn-joining-loading' : ''}" id="btn-submit-join-code" ${isJoining ? 'disabled' : ''}>
+                  ${isJoining ? '⏳ Connecting to Table...' : '🚀 Join Table & Play'}
                 </button>
               </div>
             </div>

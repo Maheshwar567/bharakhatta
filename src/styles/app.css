@@ -5710,5 +5710,300 @@ body {
   animation: pulseLive 1.2s infinite alternate;
 }
 
+/* ==========================================================================
+   Royal Arcade Create & Join Table Components (Friends Hub & Room Modals)
+   ========================================================================== */
+
+.table-code-hero-card {
+  background: linear-gradient(145deg, rgba(26, 18, 8, 0.95), rgba(45, 30, 10, 0.9));
+  border: 2px solid #f39c12;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 215, 0, 0.3);
+  border-radius: 16px;
+  padding: 16px 14px;
+  text-align: center;
+  margin: 12px 0;
+}
+
+.table-code-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #f1c40f;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.table-digits-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.digit-box {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 54px;
+  height: 64px;
+  font-size: 32px;
+  font-weight: 900;
+  font-family: 'Cinzel', 'Trebuchet MS', sans-serif;
+  border-radius: 12px;
+  user-select: none;
+}
+
+.digit-box-gold {
+  background: linear-gradient(180deg, #ffeaa7 0%, #f1c40f 45%, #d4ac0d 80%, #9a7d0a 100%);
+  color: #2c1602;
+  border: 2px solid #fff3cd;
+  box-shadow: 0 6px 18px rgba(241, 196, 15, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.9), inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+.table-code-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-copy-code {
+  background: linear-gradient(180deg, #34495e, #1a252f);
+  color: #ecf0f1;
+  border: 1.5px solid #7f8c8d;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-copy-code:hover {
+  background: linear-gradient(180deg, #415b76, #243342);
+  border-color: #f1c40f;
+  color: #f1c40f;
+}
+
+.btn-whatsapp-share-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #2ecc71, #27ae60);
+  color: #ffffff !important;
+  text-decoration: none;
+  border: 1.5px solid #a9dfbf;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(39, 174, 96, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp-share-code:hover {
+  background: linear-gradient(180deg, #27ae60, #219d55);
+  transform: translateY(-1px);
+}
+
+/* Join Table Screen & PIN Boxes */
+.join-code-entry-wrap {
+  background: linear-gradient(145deg, rgba(20, 24, 33, 0.95), rgba(12, 15, 22, 0.9));
+  border: 1.5px solid rgba(241, 196, 15, 0.4);
+  border-radius: 16px;
+  padding: 16px 14px;
+  text-align: center;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.join-card-header {
+  margin-bottom: 12px;
+}
+
+.join-header-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.join-code-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f1c40f;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.join-code-sub {
+  font-size: 11px;
+  color: #bdc3c7;
+  margin: 0;
+}
+
+.join-pin-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+
+.join-pin-box {
+  width: 52px;
+  height: 60px;
+  border-radius: 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 26px;
+  font-weight: 900;
+  font-family: 'Cinzel', 'Trebuchet MS', sans-serif;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(241, 196, 15, 0.3);
+  color: #7f8c8d;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.join-pin-box.pin-filled {
+  background: linear-gradient(180deg, #ffeaa7 0%, #f39c12 100%);
+  border-color: #ffd700;
+  color: #2c1602;
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.join-pin-box.pin-active {
+  border-color: #f1c40f;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  animation: pulsePin 1.2s infinite alternate;
+}
+
+@keyframes pulsePin {
+  from { border-color: rgba(241, 196, 15, 0.5); }
+  to { border-color: #ffd700; box-shadow: 0 0 14px rgba(255, 215, 0, 0.8); }
+}
+
+.join-code-input {
+  width: 100%;
+  max-width: 220px;
+  margin: 4px auto 10px;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 6px;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(241, 196, 15, 0.4);
+  color: #f1c40f;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: block;
+}
+
+.join-code-input:focus {
+  outline: none;
+  border-color: #f1c40f;
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.4);
+}
+
+.btn-paste-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(241, 196, 15, 0.12);
+  border: 1.5px solid rgba(241, 196, 15, 0.5);
+  color: #f1c40f;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 4px auto 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-paste-code:hover {
+  background: rgba(241, 196, 15, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Virtual Touch Keypad for Frictionless Entry */
+.join-keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 260px;
+  margin: 6px auto 14px;
+}
+
+.btn-fhub-keypad-key {
+  height: 44px;
+  background: linear-gradient(180deg, #2c3e50, #1a252f);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: #ecf0f1;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #0e171e, 0 4px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.1s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-fhub-keypad-key:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0e171e;
+  background: #34495e;
+}
+
+.btn-fhub-keypad-key.btn-keypad-action {
+  font-size: 14px;
+  background: linear-gradient(180deg, #c0392b, #962d22);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 3px 0 #5b1b14;
+}
+
+.btn-fhub-keypad-key.btn-keypad-action:active {
+  box-shadow: 0 1px 0 #5b1b14;
+}
+
+.join-code-error {
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid #e74c3c;
+  color: #ff7675;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.btn-submit-join {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.btn-joining-loading {
+  opacity: 0.8;
+  cursor: wait;
+  animation: pulseLive 1s infinite alternate;
+}
+
+
 
 
