@@ -1,6 +1,7 @@
 // Lightweight Real-time WebSocket Room Server for Bharakhatta Multiplayer
 
 import { WebSocketServer } from "ws";
+import { getOppositeHome } from "../src/game/board.js";
 
 export function setupMultiplayerServer(httpServer) {
   const wss = new WebSocketServer({ noServer: true });
@@ -58,6 +59,8 @@ export function setupMultiplayerServer(httpServer) {
           const mode = msg.mode || "2p";
           const playerName = msg.playerName || "Player 1 (Host)";
           const userMeta = msg.userMeta || null;
+          const team1Home = msg.team1Home ? parseInt(msg.team1Home, 10) : 1;
+          const team2Home = getOppositeHome(team1Home);
 
           const player = {
             id: 1,
@@ -71,6 +74,8 @@ export function setupMultiplayerServer(httpServer) {
           const room = {
             code: roomCode,
             mode,
+            team1Home,
+            team2Home,
             players: [player],
             createdAt: Date.now()
           };
@@ -93,6 +98,8 @@ export function setupMultiplayerServer(httpServer) {
             playerId: 1,
             team: 1,
             mode,
+            team1Home,
+            team2Home,
             players: room.players.map(p => ({ id: p.id, team: p.team, name: p.name, isHost: p.isHost, userMeta: p.userMeta }))
           }));
           return;
@@ -172,6 +179,8 @@ export function setupMultiplayerServer(httpServer) {
             playerId: newId,
             team,
             mode: room.mode,
+            team1Home: room.team1Home || 1,
+            team2Home: room.team2Home || 3,
             players: playerSummary,
             hostMobile: hostMeta.mobile || null,
             hostNick: hostMeta.nickName || hostMeta.name || hostPlayer.name || "Host",
@@ -198,7 +207,7 @@ export function setupMultiplayerServer(httpServer) {
         }
 
         // Forward gameplay actions to room peers
-        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "SYNC_GAME_STATE" || type === "GATE_23_DECISION" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR") {
+        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "SYNC_GAME_STATE" || type === "GATE_23_DECISION" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR" || type === "ACTION_FORFEIT") {
           if (!currentRoomCode) return;
           const room = rooms.get(currentRoomCode);
           if (!room) return;

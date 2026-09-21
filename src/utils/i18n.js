@@ -107,6 +107,9 @@ export const TRANSLATIONS = {
     victoryDesc: "Team {team} won the match!",
     winReasonSquad: "🎉 ALL 6 COINS ENTERED 5/5 SQUAD! Team {team} has no coins left in the outer 7/7 track for the opponent to kill!",
     winReasonCenter: "🏆 All 6 coins reached the Center Sanctum (Final Home)!",
+    winReasonForfeit: "🏆 Opponent quit the game! You won by default!",
+    homeSelection: "Starting Home Base",
+    oppositeHomeNotice: "Opponent will automatically get the Opposite Home",
     rematchBtn: "🎲 Return to Lobby",
     
     // Multiplayer Modal
@@ -245,6 +248,9 @@ export const TRANSLATIONS = {
     victoryDesc: "టీమ్ {team} ఘన విజయం సాధించింది!",
     winReasonSquad: "🎉 6 గువ్వలూ 5/5 స్క్వాడ్‌లోకి చేరాయి! బయటి 7/7 ట్రాక్‌లో ప్రత్యర్థి చంపడానికి ఏ కాయిన్ మిగల్లేదు! టీమ్ {team} విజేత!",
     winReasonCenter: "🏆 మొత్తం 6 గువ్వలూ సెంటర్ హోమ్ (సెంట్ మార్క్) చేరుకున్నాయి!",
+    winReasonForfeit: "🏆 ప్రత్యర్థి ఆటను విడిచిపెట్టారు! మీరు డిఫాల్ట్‌గా గెలిచారు!",
+    homeSelection: "ప్రారంభ హోమ్ బేస్",
+    oppositeHomeNotice: "ఎదుటి ఆటగాడికి స్వయంచాలకంగా ఎదురుగా ఉన్న హోమ్ వస్తుంది",
     rematchBtn: "🎲 లాబీకి తిరిగి వెళ్ళు",
     
     // Multiplayer Modal

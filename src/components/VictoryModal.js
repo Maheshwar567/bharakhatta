@@ -33,11 +33,16 @@ export function renderVictoryModal(winner, onRestart) {
     }
   }, 100);
 
-  const teamName = winner.team === 1 ? "Team 1 (Saffron / Bottom)" : "Team 2 (Green / Top)";
+  const teamName = winner.team === 1 ? "Team 1 (Saffron)" : "Team 2 (Green)";
   const isSquadWin = winner.reason === "SQUAD_5X5_COMPLETE";
-  const victoryQuote = isSquadWin 
-    ? t("winReasonSquad", { team: winner.team })
-    : t("winReasonCenter");
+  const isForfeitWin = winner.reason === "OPPONENT_QUIT";
+  const victoryQuote = isForfeitWin 
+    ? (winner.quittingPlayerName ? `🚪 ${winner.quittingPlayerName} quit the match! ${t("winReasonForfeit")}` : t("winReasonForfeit"))
+    : (isSquadWin ? t("winReasonSquad", { team: winner.team }) : t("winReasonCenter"));
+
+  const subtitle = isForfeitWin 
+    ? `Default Win • ${winner.player?.name || teamName}`
+    : `${t("victoryDesc", { team: winner.team })} (${teamName})`;
 
   return `
     <div class="modal-backdrop" id="victory-modal-backdrop">
@@ -45,7 +50,7 @@ export function renderVictoryModal(winner, onRestart) {
         <div class="victory-header">
           <div class="trophy-bounce">🏆</div>
           <h2 class="victory-title">${t("victoryTitle")}</h2>
-          <span class="victory-subtitle">${t("victoryDesc", { team: winner.team })} (${teamName})</span>
+          <span class="victory-subtitle">${subtitle}</span>
         </div>
 
         <div class="modal-body">

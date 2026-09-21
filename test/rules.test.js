@@ -11,7 +11,7 @@ if (typeof globalThis.localStorage === "undefined") {
 
 import { BharakhattaEngine, GAME_STATUS } from "../src/game/engine.js";
 import { CowrieDice } from "../src/game/cowries.js";
-import { getPlayerPath, isSafeSquare } from "../src/game/board.js";
+import { getPlayerPath, isSafeSquare, getOppositeHome } from "../src/game/board.js";
 import { UserManager, computeNickName } from "../src/game/userManager.js";
 import { wallet } from "../src/game/wallet.js";
 import { generateUniqueBoardNumber, generateUnique4DigitTableCode, normalizeBoardNumber } from "../src/game/multiplayerClient.js";
@@ -710,6 +710,60 @@ function runTests() {
   ]);
   assert(teamEngine.players.length === 4, "4-Player offline game initialized");
   assert(teamEngine.players[1].isAI === true && teamEngine.players[3].isAI === true, "Opposite pair are both System AI");
+
+  // 24. Opposite Home Pair Mathematics & Board Geometry
+  console.log("\n--- Test 24: Opposite Home Pair Mathematics & Board Geometry ---");
+  assert(getOppositeHome(1) === 3, "Home 1 (East) opposite is Home 3 (West)");
+  assert(getOppositeHome(2) === 4, "Home 2 (North) opposite is Home 4 (South)");
+  assert(getOppositeHome(3) === 1, "Home 3 (West) opposite is Home 1 (East)");
+  assert(getOppositeHome(4) === 2, "Home 4 (South) opposite is Home 2 (North)");
+
+  // 25. Dynamic Starting Home Selection & Automatic Opposite Home Assignment
+  console.log("\n--- Test 25: Dynamic Starting Home Selection & Automatic Opposite Home Assignment ---");
+  const testEngine = new BharakhattaEngine({ gameMode: "2p" });
+  
+  // Case A: Team 1 chooses Home 1 (East) -> Opponent defaults to Home 3 (West)
+  testEngine.initGame(null, 1);
+  assert(testEngine.team1Home === 1, "Team 1 is assigned Home 1");
+  assert(testEngine.team2Home === 3, "Team 2 is automatically assigned opposite Home 3");
+  assert(testEngine.coins.filter(c => c.team === 1)[0].coord.r === 3 && testEngine.coins.filter(c => c.team === 1)[0].coord.c === 6, "Team 1 jail is East (3, 6)");
+  assert(testEngine.coins.filter(c => c.team === 2)[0].coord.r === 3 && testEngine.coins.filter(c => c.team === 2)[0].coord.c === 0, "Team 2 jail is West (3, 0)");
+
+  // Case B: Team 1 chooses Home 4 (South) -> Opponent defaults to Home 2 (North)
+  testEngine.initGame(null, 4);
+  assert(testEngine.team1Home === 4, "Team 1 is assigned Home 4 (South)");
+  assert(testEngine.team2Home === 2, "Team 2 is automatically assigned opposite Home 2 (North)");
+  assert(testEngine.coins.filter(c => c.team === 1)[0].coord.r === 6 && testEngine.coins.filter(c => c.team === 1)[0].coord.c === 3, "Team 1 jail is South (6, 3)");
+  assert(testEngine.coins.filter(c => c.team === 2)[0].coord.r === 0 && testEngine.coins.filter(c => c.team === 2)[0].coord.c === 3, "Team 2 jail is North (0, 3)");
+
+  // Case C: State snapshot preserves opposite home configuration
+  const oppositeSnap = testEngine.getStateSnapshot();
+  assert(oppositeSnap.team1Home === 4 && oppositeSnap.team2Home === 2, "State snapshot preserves team1Home and team2Home");
+  const restoreEngine = new BharakhattaEngine({ gameMode: "2p" });
+  restoreEngine.applyStateSnapshot(oppositeSnap);
+  assert(restoreEngine.team1Home === 4 && restoreEngine.team2Home === 2, "State restore accurately restores opposite homes");
+
+  // 26. Default Win on Opponent Quit / Forfeit
+  console.log("\n--- Test 26: Default Win on Opponent Quit / Forfeit ---");
+  const forfeitEngine = new BharakhattaEngine({ gameMode: "2p" });
+  forfeitEngine.initGame();
+  assert(forfeitEngine.winner === null, "Initial game has no winner");
+  assert(forfeitEngine.status === GAME_STATUS.WAITING_FOR_ROLL, "Initial game waiting for roll");
+
+  // Team 2 quits -> Team 1 receives default win
+  forfeitEngine.forfeit(2);
+  assert(forfeitEngine.winner !== null, "Game has declared a winner");
+  assert(forfeitEngine.winner.team === 1, "Team 1 awarded default victory when Team 2 quits");
+  assert(forfeitEngine.winner.reason === "OPPONENT_QUIT", "Win reason explicitly recorded as 'OPPONENT_QUIT'");
+  assert(forfeitEngine.winner.quittingPlayerName !== undefined, "Quitting player name recorded");
+  assert(forfeitEngine.status === GAME_STATUS.GAME_OVER, "Game status is GAME_OVER");
+
+  // Team 1 quits in fresh game -> Team 2 receives default win
+  const forfeitEngine2 = new BharakhattaEngine({ gameMode: "2p" });
+  forfeitEngine2.initGame();
+  forfeitEngine2.forfeit(1);
+  assert(forfeitEngine2.winner !== null && forfeitEngine2.winner.team === 2, "Team 2 awarded default victory when Team 1 quits");
+  assert(forfeitEngine2.winner.reason === "OPPONENT_QUIT", "Win reason recorded as 'OPPONENT_QUIT'");
 
   console.log(`\n===================================`);
   console.log(`TEST RESULTS: ${passed} / ${total} PASSED!`);

@@ -4,6 +4,7 @@ import {
   isSafeSquare,
   isCenterSquare,
   getPlayerPath,
+  getOppositeHome,
   JAIL_COORDS
 } from "./board.js";
 import { CowrieDice } from "./cowries.js";
@@ -26,6 +27,12 @@ export class BharakhattaEngine {
     this.pathStyle = options.pathStyle || "spiral"; // 'spiral' (traditional 3-ring spiral) or 'classic'
     this.requireKill = options.requireKill !== undefined ? options.requireKill : true;
 
+    // Guaranteed Opposite Homes Rule:
+    // Whoever got 1st home (team1Home), the opposing team (team2Home) MUST ALWAYS default get the opposite home!
+    // 1 (East) <-> 3 (West) | 2 (North) <-> 4 (South)
+    this.team1Home = options.team1Home ? parseInt(options.team1Home, 10) : 1;
+    this.team2Home = options.team2Home ? parseInt(options.team2Home, 10) : getOppositeHome(this.team1Home);
+
     this.onStateChange = options.onStateChange || (() => {});
     this.onLog = options.onLog || (() => {});
     this.onTurnChange = options.onTurnChange || (() => {});
@@ -37,8 +44,25 @@ export class BharakhattaEngine {
     this.initGame();
   }
 
-  initGame(customPlayers = null) {
+  getTeamHome(teamId) {
+    return teamId === 1 ? (this.team1Home || 1) : (this.team2Home || getOppositeHome(this.team1Home || 1));
+  }
+
+  getTeamPath(teamId) {
+    const home = this.getTeamHome(teamId);
+    return getPlayerPath(home, this.pathStyle);
+  }
+
+  initGame(customPlayers = null, team1Home = null) {
     this.bothGatesPrompted = false;
+
+    if (team1Home) {
+      this.team1Home = parseInt(team1Home, 10) || 1;
+      this.team2Home = getOppositeHome(this.team1Home);
+    } else {
+      this.team2Home = getOppositeHome(this.team1Home || 1);
+    }
+
     // 2p Mode: Player 1 (Team 1) vs Player 2 (Team 2)
     // 4p Mode: P1 & P3 (Team 1) vs P2 & P4 (Team 2)
     if (customPlayers && Array.isArray(customPlayers) && customPlayers.length > 0) {
@@ -59,12 +83,15 @@ export class BharakhattaEngine {
       ];
     } else {
       this.players = [
-        { id: 1, team: 1, name: "Player 1 (Bottom)", avatar: "👑", color: "#e67e22", isAI: false },
-        { id: 2, team: 2, name: "Player 2 (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
+        { id: 1, team: 1, name: "Player 1 (Team 1)", avatar: "👑", color: "#e67e22", isAI: false },
+        { id: 2, team: 2, name: "Player 2 (Opponent)", avatar: "🦚", color: "#27ae60", isAI: true }
       ];
     }
 
-    // 6 Coins for Team 1 (Bottom), 6 Coins for Team 2 (Top)
+    // 6 Coins for Team 1, 6 Coins for Team 2 (Opposite Home)
+    const t1Coord = JAIL_COORDS[this.team1Home] || JAIL_COORDS.team1;
+    const t2Coord = JAIL_COORDS[this.team2Home] || JAIL_COORDS.team2;
+
     this.coins = [];
     for (let i = 1; i <= 6; i++) {
       this.coins.push({
@@ -74,7 +101,7 @@ export class BharakhattaEngine {
         inJail: true,
         stepIndex: -1,
         isFinished: false,
-        coord: { ...JAIL_COORDS.team1 }
+        coord: { ...t1Coord }
       });
       this.coins.push({
         id: `t2_c${i}`,
@@ -83,7 +110,7 @@ export class BharakhattaEngine {
         inJail: true,
         stepIndex: -1,
         isFinished: false,
-        coord: { ...JAIL_COORDS.team2 }
+        coord: { ...t2Coord }
       });
     }
 
@@ -222,7 +249,7 @@ export class BharakhattaEngine {
     const moves = [];
     const teamCoins = this.getTeamCoins(teamId);
     const jailCoins = this.getJailCoins(teamId);
-    const path = getPlayerPath(teamId, this.pathStyle);
+    const path = this.getTeamPath(teamId);
 
     // Rule: Can release from jail ONLY on roll of 1 (Okkati), releasing exactly 1 coin
     const canReleaseFromJail = (score === 1) && jailCoins.length > 0;
@@ -328,7 +355,7 @@ export class BharakhattaEngine {
 
     const player = this.getCurrentPlayer();
     const teamId = player.team;
-    const path = getPlayerPath(teamId, this.pathStyle);
+    const path = this.getTeamPath(teamId);
 
     if (move.type === "RELEASE_JAIL") {
       // Release coin(s) from jail to Home square
@@ -623,6 +650,26 @@ export class BharakhattaEngine {
     }
   }
 
+  // Forfeit: when a player quits, the other player/team immediately wins by default
+  forfeit(quittingTeamId) {
+    const qTeam = parseInt(quittingTeamId, 10) || 1;
+    const winningTeamId = qTeam === 1 ? 2 : 1;
+    const winningPlayer = this.players.find(p => p.team === winningTeamId) || { name: `Team ${winningTeamId}`, team: winningTeamId };
+    const quittingPlayer = this.players.find(p => p.team === qTeam) || { name: `Team ${qTeam}`, team: qTeam };
+
+    this.winner = {
+      team: winningTeamId,
+      player: winningPlayer,
+      reason: "OPPONENT_QUIT",
+      quittingPlayerName: quittingPlayer.name,
+      stats: { ...this.stats, durationSec: Math.round((Date.now() - (this.stats?.startTime || Date.now())) / 1000) }
+    };
+    this.status = GAME_STATUS.GAME_OVER;
+    sounds.playVictory();
+    this.log(`🏆 ${quittingPlayer.name} quit the match! ${winningPlayer.name} (Team ${winningTeamId}) wins by default!`);
+    this.emitChange();
+  }
+
   log(msg) {
     if (this.onLog) {
       this.onLog({
@@ -646,6 +693,8 @@ export class BharakhattaEngine {
       diceMode: this.diceMode,
       pathStyle: this.pathStyle,
       requireKill: this.requireKill,
+      team1Home: this.team1Home,
+      team2Home: this.team2Home,
       players: this.players,
       currentPlayer: this.getCurrentPlayer(),
       currentRoll: this.currentRoll,
@@ -663,6 +712,8 @@ export class BharakhattaEngine {
     if (!snapshot) return;
     this.status = snapshot.status;
     this.gameMode = snapshot.gameMode || this.gameMode;
+    if (snapshot.team1Home !== undefined) this.team1Home = snapshot.team1Home;
+    if (snapshot.team2Home !== undefined) this.team2Home = snapshot.team2Home;
     if (snapshot.players && Array.isArray(snapshot.players)) {
       this.players = snapshot.players.map(p => ({ ...p }));
     }

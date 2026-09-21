@@ -2,6 +2,7 @@
 // Works locally via WebSocket and globally on GitHub Pages / Mobile via WebRTC P2P
 
 import PeerModule from "peerjs";
+import { getOppositeHome } from "./board.js";
 const Peer = PeerModule.Peer || PeerModule.default || PeerModule;
 
 // Guaranteed Non-Repeating 4-Digit Table Code Generator
@@ -146,10 +147,13 @@ export class MultiplayerClient {
     this.onStart4pAIPair = options.onStart4pAIPair || (() => {});
     this.onSyncGameState = options.onSyncGameState || (() => {});
     this.onGate23Decision = options.onGate23Decision || (() => {});
+    this.onForfeit = options.onForfeit || (() => {});
     this.onError = options.onError || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
     this.currentBet = 250;
     this.gameMode = "2p";
+    this.team1Home = 1;
+    this.team2Home = 3;
     this.peerConns = new Set();
   }
 
@@ -212,6 +216,8 @@ export class MultiplayerClient {
         this.myTeam = msg.team;
         this.isHost = true;
         this.gameMode = msg.mode || "2p";
+        this.team1Home = msg.team1Home || 1;
+        this.team2Home = msg.team2Home || getOppositeHome(this.team1Home);
         this.onRoomCreated(msg);
         break;
 
@@ -221,6 +227,8 @@ export class MultiplayerClient {
         this.myTeam = msg.team;
         this.isHost = false;
         this.gameMode = msg.mode || "2p";
+        this.team1Home = msg.team1Home || 1;
+        this.team2Home = msg.team2Home || getOppositeHome(this.team1Home);
         this.onRoomJoined(msg);
         break;
 
@@ -257,6 +265,10 @@ export class MultiplayerClient {
         this.onSyncTimeoutPass(msg);
         break;
 
+      case "ACTION_FORFEIT":
+        this.onForfeit(msg);
+        break;
+
       case "START_4P_AI_PAIR":
         this.onStart4pAIPair(msg);
         break;
@@ -275,16 +287,27 @@ export class MultiplayerClient {
     }
   }
 
-  async createRoom(mode = "2p", playerName = "Player 1", customCode = null, userMeta = null) {
+  sendForfeit(quittingTeam, playerId = null) {
+    this.send({
+      type: "ACTION_FORFEIT",
+      roomCode: this.roomCode,
+      quittingTeam: quittingTeam || this.myTeam,
+      playerId: playerId || this.myPlayerId
+    });
+  }
+
+  async createRoom(mode = "2p", playerName = "Player 1", customCode = null, userMeta = null, team1Home = 1) {
     this.hostName = playerName;
     this.hostMeta = userMeta;
     this.gameMode = mode;
+    this.team1Home = parseInt(team1Home, 10) || 1;
+    this.team2Home = getOppositeHome(this.team1Home);
 
     // Check if we should use P2P or WS
     if (!this.isP2PPreferred()) {
       try {
         await this.connectWS();
-        this.send({ type: "CREATE_ROOM", mode, playerName, roomCode: customCode, userMeta });
+        this.send({ type: "CREATE_ROOM", mode, playerName, roomCode: customCode, userMeta, team1Home: this.team1Home });
         return;
       } catch (e) {
         console.log("WS failed, switching to P2P WebRTC:", e);
@@ -314,6 +337,8 @@ export class MultiplayerClient {
         playerId: 1,
         team: 1,
         mode,
+        team1Home: this.team1Home,
+        team2Home: this.team2Home,
         players: [{ id: 1, team: 1, name: playerName, isHost: true }]
       });
     });
@@ -373,6 +398,8 @@ export class MultiplayerClient {
             playerId: guestId,
             team: guestTeam,
             mode: this.gameMode,
+            team1Home: this.team1Home,
+            team2Home: this.team2Home,
             players,
             bet: this.currentBet,
             hostMobile: this.hostMeta?.mobile || "",

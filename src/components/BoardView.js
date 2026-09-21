@@ -64,13 +64,26 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
       const isH4Gate = (r === 6 && c === 2);
       const isAnyGate = isH1Gate || isH2Gate || isH3Gate || isH4Gate;
 
+      const t1Home = gameState.team1Home || 1;
+      const t2Home = gameState.team2Home || 3;
+      let cellHomeId = 0;
+      if (r === 3 && c === 6) cellHomeId = 1;
+      else if (r === 0 && c === 3) cellHomeId = 2;
+      else if (r === 3 && c === 0) cellHomeId = 3;
+      else if (r === 6 && c === 3) cellHomeId = 4;
+
+      const isTeam1Home = cellHomeId === t1Home;
+      const isTeam2Home = cellHomeId === t2Home;
+
       let cellClasses = ["board-cell"];
       if (isSafe) cellClasses.push("cell-safe-katta");
       if (isCenter) cellClasses.push("cell-center-sanctum");
-      if (r === 3 && c === 6) cellClasses.push("cell-home-h1");
-      if (r === 0 && c === 3) cellClasses.push("cell-home-h2");
-      if (r === 3 && c === 0) cellClasses.push("cell-home-h3");
-      if (r === 6 && c === 3) cellClasses.push("cell-home-h4");
+      if (cellHomeId === 1) cellClasses.push("cell-home-h1");
+      if (cellHomeId === 2) cellClasses.push("cell-home-h2");
+      if (cellHomeId === 3) cellClasses.push("cell-home-h3");
+      if (cellHomeId === 4) cellClasses.push("cell-home-h4");
+      if (isTeam1Home) cellClasses.push("cell-team1-base");
+      if (isTeam2Home) cellClasses.push("cell-team2-base");
       if (isAnyGate) cellClasses.push("cell-gate-step23");
       if (matchingMove) cellClasses.push("cell-valid-target");
 
@@ -99,10 +112,9 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
         `;
       } else if (isSafe) {
         let homeLabel = "";
-        if (r === 3 && c === 6) homeLabel = "H1 (EAST)";
-        else if (r === 0 && c === 3) homeLabel = "H2 (NORTH)";
-        else if (r === 3 && c === 0) homeLabel = "H3 (WEST)";
-        else if (r === 6 && c === 3) homeLabel = "H4 (SOUTH)";
+        if (isTeam1Home) homeLabel = `👑 T1 (H${cellHomeId})`;
+        else if (isTeam2Home) homeLabel = `🦚 T2 OPPOSITE (H${cellHomeId})`;
+        else if (cellHomeId > 0) homeLabel = `H${cellHomeId} SAFE`;
 
         markerHtml = `
           <div class="katta-x-mark">
@@ -110,7 +122,7 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
               <line x1="10" y1="10" x2="90" y2="90" stroke="#8a2512" stroke-width="6" stroke-linecap="round" />
               <line x1="90" y1="10" x2="10" y2="90" stroke="#8a2512" stroke-width="6" stroke-linecap="round" />
             </svg>
-            ${homeLabel ? `<span class="cell-tag">${homeLabel}</span>` : ""}
+            ${homeLabel ? `<span class="cell-tag ${isTeam1Home ? 'cell-tag-t1' : (isTeam2Home ? 'cell-tag-t2' : '')}">${homeLabel}</span>` : ""}
           </div>
         `;
       } else if (isAnyGate) {
@@ -151,7 +163,7 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
     <div class="jail-box jail-top ${isT2Active ? 'jail-turn-active' : ''} ${currentTeam === 2 && canRelease ? 'jail-actionable' : ''}" id="jail-team2">
       <div class="jail-header-compact">
         <div class="jail-team-tag t2-tag">
-          <span>🦚 ${t2Player.name}</span>
+          <span>🦚 ${t2Player.name} <small class="jail-home-sub">(Opposite Home ${gameState.team2Home || 3})</small></span>
           ${isT2Active ? '<span class="jail-turn-pulse">👉 TURN</span>' : ''}
         </div>
         <div class="jail-meta">
@@ -183,7 +195,7 @@ export function renderBoard(gameState, mpState = null, selectedCoinId = null) {
     <div class="jail-box jail-bottom ${isT1Active ? 'jail-turn-active' : ''} ${currentTeam === 1 && canRelease ? 'jail-actionable' : ''}" id="jail-team1">
       <div class="jail-header-compact">
         <div class="jail-team-tag t1-tag">
-          <span>👑 ${t1Player.name}</span>
+          <span>👑 ${t1Player.name} <small class="jail-home-sub">(Home ${gameState.team1Home || 1})</small></span>
           ${isT1Active ? '<span class="jail-turn-pulse">👉 TURN</span>' : ''}
         </div>
         <div class="jail-meta">

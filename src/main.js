@@ -28,6 +28,7 @@ import { TurnTimer } from "./game/turnTimer.js";
 import { sounds } from "./audio/soundManager.js";
 import { haptics } from "./utils/haptics.js";
 import { t, getLanguage, toggleLanguage } from "./utils/i18n.js";
+import { getOppositeHome } from "./game/board.js";
 
 class BharakhattaApp {
   constructor() {
@@ -130,6 +131,8 @@ class BharakhattaApp {
     this.baseMobileUrl = isLocal ? githubPagesUrl : window.location.href.split("?")[0].replace(/\/?$/, "/");
     this.localWifiUrl = "http://192.168.31.186:5173/";
 
+    this.selectedHome = 1; // Default starting home base (East H1) - Opponent guaranteed gets opposite base
+
     this.mpState = {
       isConnected: false,
       roomCode: null,
@@ -145,6 +148,7 @@ class BharakhattaApp {
       onRoomJoined: (data) => this.handleRoomJoined(data),
       onPlayerJoined: (player, players) => this.handlePlayerJoined(player, players),
       onPlayerLeft: (playerId, players) => this.handlePlayerLeft(playerId, players),
+      onForfeit: (msg) => this.handleRemoteForfeit(msg),
       onSyncRoll: (rollResult) => this.handleRemoteRoll(rollResult),
       onSyncMove: (move) => this.handleRemoteMove(move),
       onSyncRestart: () => this.handleRemoteRestart(),
@@ -215,7 +219,7 @@ class BharakhattaApp {
           { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
           { id: 3, team: 1, name: "Teammate AI", avatar: "🦁", color: "#d35400", isAI: true },
           { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
-        ]);
+        ], this.selectedHome);
         this.winnerAwarded = false;
         this.turnTimer.start();
         this.engine.log(`🎲 4-Player Solo match started! You & Teammate AI (Team 1) vs System AI Pair (Team 2). Pot: 🪙${this.matchPot.toLocaleString()}`);
@@ -227,7 +231,7 @@ class BharakhattaApp {
       this.mpModalOpen = true;
       this.turnTimer.stop();
       if (!this.mpState.roomCode) {
-        this.mpClient.createRoom("4p", myName);
+        this.mpClient.createRoom("4p", myName, null, null, this.currentBet, this.selectedHome);
       }
       this.render();
       return true;
@@ -238,7 +242,7 @@ class BharakhattaApp {
       this.mpModalOpen = true;
       this.turnTimer.stop();
       if (!this.mpState.roomCode) {
-        this.mpClient.createRoom("2p", myName);
+        this.mpClient.createRoom("2p", myName, null, null, this.currentBet, this.selectedHome);
       }
       this.render();
       return true;
@@ -249,7 +253,7 @@ class BharakhattaApp {
     this.engine.initGame([
       { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
       { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
-    ]);
+    ], this.selectedHome);
     this.winnerAwarded = false;
     this.turnTimer.start();
     this.engine.log(`🎲 2-Player Game started vs System AI! Stake: 🪙${bet.toLocaleString()} | Winner Pot: 🪙${this.matchPot.toLocaleString()}`);
@@ -390,15 +394,9 @@ class BharakhattaApp {
     if (this.mpState.roomCode) {
       // In multiplayer: forfeit match and award pot to remote opponent
       this.engine.log(`⏰ Match forfeited: You were away in other apps for >2 minutes (${Math.floor(awaySec / 60)}m ${awaySec % 60}s).`);
-      this.mpClient.sendTimeoutPass(this.mpState.myPlayerId);
-
       const myTeam = this.mpState.myTeam || 1;
-      const oppTeam = myTeam === 1 ? 2 : 1;
-      this.engine.winner = {
-        team: oppTeam,
-        player: this.engine.players.find(p => p.team === oppTeam) || { name: "Opponent", team: oppTeam }
-      };
-      this.engine.status = GAME_STATUS.GAME_OVER;
+      this.mpClient.sendForfeit(myTeam, this.mpState.myPlayerId);
+      this.engine.forfeit(myTeam);
 
       // Record forfeit in user history
       userManager.recordMatch({
@@ -571,7 +569,8 @@ class BharakhattaApp {
       { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
       { id: 2, team: 2, name: "Player 2 (Friend)", avatar: "🦚", color: "#27ae60", isAI: false }
     ];
-    this.engine.initGame(players);
+    const team1Home = data.team1Home || this.selectedHome || 1;
+    this.engine.initGame(players, team1Home);
     this.turnTimer.start();
 
     const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
@@ -604,7 +603,8 @@ class BharakhattaApp {
       { id: 1, team: 1, name: "Player 1 (Friend)", avatar: "👑", color: "#e67e22", isAI: false },
       { id: 2, team: 2, name: `${myName} (You)`, avatar: "🦚", color: "#27ae60", isAI: false }
     ];
-    this.engine.initGame(players);
+    const guestTeam1Home = data.team1Home || 1;
+    this.engine.initGame(players, guestTeam1Home);
     this.turnTimer.start();
 
     // Mutual friend exchange: Save host details on guest device
@@ -683,7 +683,21 @@ class BharakhattaApp {
 
   handlePlayerLeft(playerId, players) {
     this.mpState.players = players;
-    this.engine.log(`⚠️ Opponent disconnected.`);
+    this.engine.log(`⚠️ Opponent disconnected / left the table.`);
+    if (this.engine && !this.engine.winner && this.engine.status !== GAME_STATUS.GAME_OVER && !this.inLobby) {
+      const myTeam = this.mpState.myTeam || 1;
+      const oppTeam = myTeam === 1 ? 2 : 1;
+      this.engine.forfeit(oppTeam);
+    }
+    this.render();
+  }
+
+  handleRemoteForfeit(msg) {
+    this.engine.log(`🚪 Opponent quit the game. You won by default!`);
+    const quittingTeam = (msg && msg.quittingTeam) ? msg.quittingTeam : (this.mpState.myTeam === 1 ? 2 : 1);
+    if (this.engine && !this.engine.winner) {
+      this.engine.forfeit(quittingTeam);
+    }
     this.render();
   }
 
@@ -837,6 +851,7 @@ class BharakhattaApp {
       modalsHtml += renderComputerMatchModal(true, {
         playerCount: this.computerPlayerCount,
         selectedBet: this.computerBet,
+        selectedHome: this.selectedHome,
         walletCoins: wallet.getBalance()
       });
     }
@@ -863,6 +878,7 @@ class BharakhattaApp {
         roomCode: code,
         mode: this.roomCreationMode,
         selectedBet: this.currentBet,
+        selectedHome: this.selectedHome,
         walletCoins: wallet.getBalance(),
         shareUrl,
         qrDataUrl: this.roomQrDataUrl,
@@ -1576,6 +1592,20 @@ class BharakhattaApp {
       };
     });
 
+    document.querySelectorAll(".btn-cm-home, .btn-room-home").forEach(homeBtn => {
+      homeBtn.onclick = () => {
+        const homeVal = parseInt(homeBtn.getAttribute("data-cm-home") || homeBtn.getAttribute("data-room-home"), 10);
+        if (homeVal) {
+          this.selectedHome = homeVal;
+          if (this.mpClient) {
+            this.mpClient.team1Home = homeVal;
+            this.mpClient.team2Home = getOppositeHome(homeVal);
+          }
+          this.render();
+        }
+      };
+    });
+
     const btnStartComputerGame = document.getElementById("btn-start-computer-game");
     if (btnStartComputerGame) {
       btnStartComputerGame.onclick = () => {
@@ -1599,7 +1629,7 @@ class BharakhattaApp {
             { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
             { id: 3, team: 1, name: "Teammate AI", avatar: "🦁", color: "#d35400", isAI: true },
             { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
-          ]);
+          ], this.selectedHome);
           this.winnerAwarded = false;
           this.turnTimer.start();
           this.engine.log(`🎲 4-Player Offline match vs System AI Pair started! Pot: 🪙${this.matchPot.toLocaleString()}`);
@@ -1608,7 +1638,7 @@ class BharakhattaApp {
           this.engine.initGame([
             { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
             { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
-          ]);
+          ], this.selectedHome);
           this.winnerAwarded = false;
           this.turnTimer.start();
           this.engine.log(`🎲 2-Player Offline match vs System AI started! Pot: 🪙${this.matchPot.toLocaleString()}`);
@@ -1736,7 +1766,7 @@ class BharakhattaApp {
           nickName: user?.nickName || myName,
           fullName: user?.name || myName
         };
-        await this.mpClient.createRoom(this.roomCreationMode, myName, this.current4DigitCode, userMeta);
+        await this.mpClient.createRoom(this.roomCreationMode, myName, this.current4DigitCode, userMeta, this.currentBet, this.selectedHome);
         this.createRoomModalOpen = true;
         this.render();
       };
@@ -1811,7 +1841,7 @@ class BharakhattaApp {
           nickName: user?.nickName || myName,
           fullName: user?.name || myName
         };
-        await this.mpClient.createRoom("2p", myName, this.current4DigitCode, userMeta);
+        await this.mpClient.createRoom("2p", myName, this.current4DigitCode, userMeta, this.currentBet, this.selectedHome);
         this.createRoomModalOpen = true;
         this.engine.log(`⚔️ Challenged ${friendName} to Table #${this.current4DigitCode}!`);
         this.render();
@@ -2105,9 +2135,11 @@ class BharakhattaApp {
         });
 
         if (this.mpState.roomCode) {
-          this.mpClient.sendTimeoutPass(this.mpState.myPlayerId);
+          this.mpClient.sendForfeit(myTeam, this.mpState.myPlayerId);
           this.mpClient.leaveRoom();
         }
+
+        this.engine.forfeit(myTeam);
 
         this.exitModalOpen = false;
         this.turnTimer.stop();

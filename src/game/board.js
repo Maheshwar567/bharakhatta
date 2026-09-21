@@ -115,7 +115,16 @@ export const PATH_H4 = PATH_H1.map((pt, idx) => ({
   label: idx === 0 ? "Home 4" : (idx === 48 ? "Happy Home" : pt.label)
 }));
 
-// Path getter supporting teams/players 1, 2, 3, 4
+// Guaranteed Opposite Home calculation:
+// 1 (East) <-> 3 (West)
+// 2 (North) <-> 4 (South)
+export function getOppositeHome(homeId) {
+  const num = parseInt(homeId, 10) || 1;
+  const map = { 1: 3, 2: 4, 3: 1, 4: 2 };
+  return map[num] || 3;
+}
+
+// Path getter supporting teams/players/homes 1, 2, 3, 4
 export function getPlayerPath(id, pathStyle = "spiral") {
   if (id === 1) return PATH_H1;
   if (id === 2) return PATH_H2;
@@ -125,14 +134,14 @@ export function getPlayerPath(id, pathStyle = "spiral") {
 }
 
 export const JAIL_COORDS = {
-  1: { r: 3, c: 6, name: "Home 1 Jail" },
-  2: { r: 0, c: 3, name: "Home 2 Jail" },
-  3: { r: 3, c: 0, name: "Home 3 Jail" },
-  4: { r: 6, c: 3, name: "Home 4 Jail" },
-  team1: { r: 3, c: 6, name: "Home 1 Jail" },
-  team2: { r: 0, c: 3, name: "Home 2 Jail" },
-  team3: { r: 3, c: 0, name: "Home 3 Jail" },
-  team4: { r: 6, c: 3, name: "Home 4 Jail" }
+  1: { r: 3, c: 6, name: "Home 1 Jail (East)" },
+  2: { r: 0, c: 3, name: "Home 2 Jail (North)" },
+  3: { r: 3, c: 0, name: "Home 3 Jail (West)" },
+  4: { r: 6, c: 3, name: "Home 4 Jail (South)" },
+  team1: { r: 3, c: 6, name: "Home 1 Jail (East)" },
+  team2: { r: 3, c: 0, name: "Home 3 Jail (West)" }, // Opposite to Home 1
+  team3: { r: 3, c: 0, name: "Home 3 Jail (West)" },
+  team4: { r: 6, c: 3, name: "Home 4 Jail (South)" }
 };
 
 // Aliases for backwards compatibility with tests

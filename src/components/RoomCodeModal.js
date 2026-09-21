@@ -11,6 +11,7 @@ export function renderCreateRoomModal(isOpen, options = {}) {
     roomCode = "4821",
     mode = "2p", // "2p" (1v1) or "4p" (2v2)
     selectedBet = 250,
+    selectedHome = 1,
     walletCoins = 1000,
     shareUrl = "",
     qrDataUrl = null,
@@ -89,6 +90,48 @@ export function renderCreateRoomModal(isOpen, options = {}) {
                   </button>
                 `;
               }).join('')}
+            </div>
+          </div>
+
+          <!-- Starting Home Selection (Opposite Home Rule) -->
+          <div class="room-setup-section">
+            <div class="cm-section-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="setup-section-label" style="margin-bottom: 0;">Starting Home Base:</label>
+              <span class="cm-opposite-hint">Opponent gets Opposite Home</span>
+            </div>
+            <div class="cm-homes-grid">
+              <button type="button" class="btn-cm-home btn-room-home ${selectedHome === 1 ? 'home-active' : ''}" data-room-home="1">
+                <span class="cm-home-badge">H1</span>
+                <div class="cm-home-info">
+                  <strong>Home 1 (East)</strong>
+                  <span>Opponent: Home 3 (West)</span>
+                </div>
+                ${selectedHome === 1 ? '<span class="format-check">✔</span>' : ''}
+              </button>
+              <button type="button" class="btn-cm-home btn-room-home ${selectedHome === 4 ? 'home-active' : ''}" data-room-home="4">
+                <span class="cm-home-badge">H4</span>
+                <div class="cm-home-info">
+                  <strong>Home 4 (South)</strong>
+                  <span>Opponent: Home 2 (North)</span>
+                </div>
+                ${selectedHome === 4 ? '<span class="format-check">✔</span>' : ''}
+              </button>
+              <button type="button" class="btn-cm-home btn-room-home ${selectedHome === 2 ? 'home-active' : ''}" data-room-home="2">
+                <span class="cm-home-badge">H2</span>
+                <div class="cm-home-info">
+                  <strong>Home 2 (North)</strong>
+                  <span>Opponent: Home 4 (South)</span>
+                </div>
+                ${selectedHome === 2 ? '<span class="format-check">✔</span>' : ''}
+              </button>
+              <button type="button" class="btn-cm-home btn-room-home ${selectedHome === 3 ? 'home-active' : ''}" data-room-home="3">
+                <span class="cm-home-badge">H3</span>
+                <div class="cm-home-info">
+                  <strong>Home 3 (West)</strong>
+                  <span>Opponent: Home 1 (East)</span>
+                </div>
+                ${selectedHome === 3 ? '<span class="format-check">✔</span>' : ''}
+              </button>
             </div>
           </div>
 
