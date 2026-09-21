@@ -8,7 +8,8 @@ export function renderLobbyView(options = {}) {
   const {
     user,
     walletCoins = 1000,
-    hourlyRewardStatus = null
+    hourlyRewardStatus = null,
+    isSearchingOnlineMatch = false
   } = options;
 
   const nickName = user ? (user.nickName || user.name || "Player") : "Player";
@@ -107,8 +108,28 @@ export function renderLobbyView(options = {}) {
           </div>
         </div>
 
-        <!-- 4. Main Center Stage: 3D Game Buttons (Computer vs Friends) -->
+        <!-- 4. Main Center Stage: 3D Game Buttons (Online vs Computer vs Friends) -->
+        ${isSearchingOnlineMatch ? `
+          <div class="online-searching-banner">
+            <span class="searching-spin">🌀</span>
+            <span>Searching for online player... (4s Quick Match)</span>
+          </div>
+        ` : ''}
         <div class="hero-game-modes-grid">
+          <!-- Green 3D Button: Play Online (Random Online Match) -->
+          <button class="game-mode-3d-btn btn-mode-green" id="btn-mode-online">
+            <div class="btn-3d-sheen"></div>
+            <div class="btn-3d-icon-box green-icon-box">
+              <span class="device-icon">🌐</span>
+              <span class="vs-badge">⚡</span>
+            </div>
+            <div class="btn-3d-text-wrap">
+              <h2 class="btn-3d-title">${t("menuOnline")}</h2>
+              <span class="btn-3d-desc">${t("menuOnlineSub")}</span>
+            </div>
+            <span class="btn-3d-pill pill-online">QUICK MATCH</span>
+          </button>
+
           <!-- Yellow 3D Button: Play with Computer (100% Offline) -->
           <button class="game-mode-3d-btn btn-mode-yellow" id="btn-mode-computer">
             <div class="btn-3d-sheen"></div>

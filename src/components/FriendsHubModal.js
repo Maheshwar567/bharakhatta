@@ -1,7 +1,8 @@
 // Friends Hub & Challenge View for Bharakhatta
-// Matches the authentic layout and styling from user screenshot (media_1789544757774.png)
+// Unifies Create Table, Join Table, and Friends List into a single friction-free modal
 
 import { t } from "../utils/i18n.js";
+import { BET_TIERS } from "../game/wallet.js";
 
 export function renderFriendsHubModal(options = {}) {
   const {
@@ -9,9 +10,15 @@ export function renderFriendsHubModal(options = {}) {
     friends = [],
     searchQuery = "",
     isEditing = false,
-    activeTab = "challenge", // "challenge", "gifts", "inbox"
+    activeTab = "create", // "create", "join", "friends"
     walletCoins = 1000,
     diamonds = 385,
+    roomCode = "4821",
+    roomMode = "2p",
+    selectedBet = 250,
+    shareUrl = "",
+    joinCode = "",
+    joinError = null,
     hourlyRewardStatus = { canClaim: true, secondsLeft: 0, rewardAmount: 500 }
   } = options;
 
@@ -23,6 +30,16 @@ export function renderFriendsHubModal(options = {}) {
     return `${m}m ${s < 10 ? '0' : ''}${s}s`;
   };
 
+  const is4p = roomMode === "4p";
+  const pot = selectedBet * 2;
+
+  const whatsappMsg = encodeURIComponent(
+    `Namaskaram! 🎲 Join my Bharakhatta match on table *${roomCode}* (${is4p ? '2v2 Teams' : '1v1'})!\n` +
+    `Pot: 🪙${pot.toLocaleString()} coins.\n` +
+    `Tap here to play: ${shareUrl || ('https://maheshwar567.github.io/bharakhatta/?room=' + roomCode)}`
+  );
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${whatsappMsg}`;
+
   return `
     <div class="modal-backdrop friends-hub-backdrop" id="friends-hub-backdrop">
       <div class="friends-hub-dialog">
@@ -32,7 +49,7 @@ export function renderFriendsHubModal(options = {}) {
             <button class="btn-fhub-back" id="btn-close-friends-hub" title="Back to Game">
               ‹
             </button>
-            <h2 class="fhub-title">Friends</h2>
+            <h2 class="fhub-title">Play with Friends</h2>
           </div>
 
           <div class="fhub-currencies">
@@ -52,107 +69,195 @@ export function renderFriendsHubModal(options = {}) {
           </div>
         </header>
 
-        <!-- Sub-Tabs: Challenge | Gifts | Inbox -->
+        <!-- Sub-Tabs: Create Table | Join Table | Friends List -->
         <nav class="fhub-tabs-strip">
-          <button class="fhub-tab ${activeTab === 'challenge' ? 'tab-active' : ''}" data-fhub-tab="challenge">
-            Challenge
+          <button class="fhub-tab ${activeTab === 'create' ? 'tab-active' : ''}" data-fhub-tab="create">
+            🎲 Create Table
           </button>
-          <button class="fhub-tab ${activeTab === 'gifts' ? 'tab-active' : ''}" data-fhub-tab="gifts">
-            Gifts
+          <button class="fhub-tab ${activeTab === 'join' ? 'tab-active' : ''}" data-fhub-tab="join">
+            🚪 Join Table
           </button>
-          <button class="fhub-tab ${activeTab === 'inbox' ? 'tab-active' : ''}" data-fhub-tab="inbox">
-            Inbox
-            <span class="tab-badge-dot">!</span>
+          <button class="fhub-tab ${activeTab === 'friends' ? 'tab-active' : ''}" data-fhub-tab="friends">
+            👥 Friends List (${friends.length})
           </button>
         </nav>
 
         <div class="friends-hub-content-scroll">
-          <!-- Private Room Action Banner -->
-          <div class="fhub-private-room-banner">
-            <div class="pr-text-col">
-              <span class="pr-title">Private room with</span>
-              <span class="pr-subtitle">up to 4 friends</span>
-            </div>
-            <div class="pr-buttons-col">
-              <button class="btn-glossy-green" id="btn-fhub-create-room">
-                Create Room
-              </button>
-              <button class="btn-glossy-gold" id="btn-fhub-join-room">
-                Join Room
-              </button>
-            </div>
-          </div>
+          ${activeTab === 'create' ? `
+            <!-- Tab 1: Create Table -->
+            <div class="fhub-tab-pane fhub-create-pane">
+              <!-- Mode Selection: 1v1 vs 2v2 Checkboxes -->
+              <div class="room-setup-section">
+                <label class="setup-section-label">Select Match Mode:</label>
+                <div class="mode-checkbox-grid">
+                  <label class="mode-checkbox-card ${!is4p ? 'mode-checked' : ''}">
+                    <input type="radio" name="create-room-mode" value="2p" ${!is4p ? 'checked' : ''} id="radio-mode-1v1" />
+                    <div class="mode-card-content">
+                      <span class="mode-card-icon">👥</span>
+                      <div class="mode-card-texts">
+                        <strong>1v1 (2 Players)</strong>
+                        <span>Head-to-head match</span>
+                      </div>
+                    </div>
+                  </label>
 
-          <!-- Search & Action Strip -->
-          <div class="fhub-action-strip">
-            <div class="fhub-search-box">
-              <span class="search-icon">🔍</span>
-              <input 
-                type="text" 
-                id="input-fhub-search" 
-                placeholder="Search list..." 
-                value="${searchQuery}" 
-              />
-              ${searchQuery ? `<button class="btn-clear-search" id="btn-clear-fhub-search">&times;</button>` : ''}
-            </div>
-
-            <button class="btn-fhub-pill btn-invite-whatsapp" id="btn-fhub-invite-whatsapp" title="Share via WhatsApp">
-              <span class="pill-icon">👥</span>
-              <span>Invite friends</span>
-            </button>
-
-            <button class="btn-fhub-pill btn-add-friend" id="btn-fhub-add-friend" title="Add friend by mobile number">
-              <span class="pill-icon">👤+</span>
-              <span>Add Friend</span>
-            </button>
-
-            <button class="btn-fhub-edit-toggle ${isEditing ? 'edit-active' : ''}" id="btn-fhub-toggle-edit" title="Toggle Delete Friends Mode">
-              ${isEditing ? '✔' : '✏️'}
-            </button>
-          </div>
-
-          <!-- Friends / Challenge List -->
-          <div class="fhub-friends-list">
-            ${friends.length === 0 ? `
-              <div class="fhub-empty-state">
-                <span class="empty-icon">👥</span>
-                <p>No friends found in your list.</p>
-                <button class="btn-primary" id="btn-fhub-empty-add">👤+ Add Friend by Mobile Number</button>
-              </div>
-            ` : friends.map(friend => `
-              <div class="friend-card-row">
-                <div class="fcard-avatar-wrap">
-                  <div class="fcard-avatar">
-                    <span>${friend.avatar || '👤'}</span>
-                  </div>
-                  <div class="fcard-level-star">
-                    <span>⭐</span>
-                    <span class="star-num">${friend.level || 33}</span>
-                  </div>
-                </div>
-
-                <div class="fcard-info">
-                  <span class="fcard-name">${friend.nickName || friend.name || 'Friend'}</span>
-                </div>
-
-                <div class="fcard-actions">
-                  <button class="btn-fcard-gift" data-friend-id="${friend.id}" title="Send Free Coins Gift">
-                    🎁
-                  </button>
-
-                  <button class="btn-glossy-green btn-fcard-challenge" data-friend-name="${friend.nickName || friend.name}" data-friend-id="${friend.id}">
-                    Challenge
-                  </button>
-
-                  ${isEditing ? `
-                    <button class="btn-fcard-delete" data-friend-id="${friend.id}" title="Delete Friend">
-                      🗑️
-                    </button>
-                  ` : ''}
+                  <label class="mode-checkbox-card ${is4p ? 'mode-checked' : ''}">
+                    <input type="radio" name="create-room-mode" value="4p" ${is4p ? 'checked' : ''} id="radio-mode-2v2" />
+                    <div class="mode-card-content">
+                      <span class="mode-card-icon">👥👥</span>
+                      <div class="mode-card-texts">
+                        <strong>2v2 (4 Players)</strong>
+                        <span>Partner & team play</span>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
-            `).join('')}
-          </div>
+
+              <!-- Pot / Stake Selection -->
+              <div class="room-setup-section">
+                <label class="setup-section-label">Bet Stake (Winner takes Pot):</label>
+                <div class="bet-chips-grid bet-chips-compact">
+                  ${BET_TIERS.map(tier => {
+                    const isSelected = tier === selectedBet;
+                    const canAfford = walletCoins >= tier;
+                    return `
+                      <button 
+                        type="button"
+                        class="btn-lobby-tier ${isSelected ? 'tier-selected' : ''} ${!canAfford ? 'tier-disabled' : ''}"
+                        data-create-bet="${tier}"
+                        ${!canAfford ? 'disabled' : ''}
+                      >
+                        <span class="tier-chip-icon">🪙</span>
+                        <span class="tier-stake">${tier}</span>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- Huge 4-Digit Table Code Display -->
+              <div class="table-code-hero-card">
+                <span class="table-code-label">TABLE CODE (SHARE WITH FRIEND)</span>
+                <div class="table-digits-display">
+                  ${(roomCode || "4821").split('').map(digit => `<span class="digit-box">${digit}</span>`).join('')}
+                </div>
+                <div class="table-code-actions">
+                  <button class="btn-copy-code" id="btn-copy-4digit-code" data-code="${roomCode || '4821'}">
+                    📋 Copy Code (${roomCode || '4821'})
+                  </button>
+                  <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp-share-code" id="btn-whatsapp-room-share" rel="noopener noreferrer">
+                    💬 Share on WhatsApp
+                  </a>
+                </div>
+              </div>
+
+              <!-- Waiting Indicator -->
+              <div class="room-waiting-indicator">
+                <div class="pulse-waiting-ring"></div>
+                <span>Waiting for friend to enter code <strong>${roomCode || '4821'}</strong>...</span>
+              </div>
+            </div>
+          ` : activeTab === 'join' ? `
+            <!-- Tab 2: Join Table -->
+            <div class="fhub-tab-pane fhub-join-pane">
+              <div class="join-code-entry-wrap">
+                <label class="join-code-label" for="input-4digit-code">Enter 4-Digit Table Code:</label>
+                <input 
+                  type="text" 
+                  id="input-4digit-code" 
+                  maxlength="4" 
+                  placeholder="e.g. 4821" 
+                  value="${joinCode}"
+                  autocomplete="off"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  class="join-code-input"
+                  autofocus
+                />
+
+                ${joinError ? `<div class="join-code-error">⚠️ ${joinError}</div>` : ''}
+
+                <button class="btn-glossy-green btn-submit-join" id="btn-submit-join-code">
+                  🚀 Join Table & Play
+                </button>
+              </div>
+            </div>
+          ` : `
+            <!-- Tab 3: Friends List -->
+            <div class="fhub-tab-pane fhub-friends-pane">
+              <!-- Search & Action Strip -->
+              <div class="fhub-action-strip">
+                <div class="fhub-search-box">
+                  <span class="search-icon">🔍</span>
+                  <input 
+                    type="text" 
+                    id="input-fhub-search" 
+                    placeholder="Search friends..." 
+                    value="${searchQuery}" 
+                  />
+                  ${searchQuery ? `<button class="btn-clear-search" id="btn-clear-fhub-search">&times;</button>` : ''}
+                </div>
+
+                <button class="btn-fhub-pill btn-invite-whatsapp" id="btn-fhub-invite-whatsapp" title="Share via WhatsApp">
+                  <span class="pill-icon">👥</span>
+                  <span>Invite WhatsApp</span>
+                </button>
+
+                <button class="btn-fhub-pill btn-add-friend" id="btn-fhub-add-friend" title="Add friend by mobile number">
+                  <span class="pill-icon">👤+</span>
+                  <span>Add Friend</span>
+                </button>
+
+                <button class="btn-fhub-edit-toggle ${isEditing ? 'edit-active' : ''}" id="btn-fhub-toggle-edit" title="Toggle Delete Friends Mode">
+                  ${isEditing ? '✔' : '✏️'}
+                </button>
+              </div>
+
+              <!-- Friends / Challenge List -->
+              <div class="fhub-friends-list">
+                ${friends.length === 0 ? `
+                  <div class="fhub-empty-state">
+                    <span class="empty-icon">👥</span>
+                    <p>No friends found in your list.</p>
+                    <button class="btn-primary" id="btn-fhub-empty-add">👤+ Add Friend by Mobile Number</button>
+                  </div>
+                ` : friends.map(friend => `
+                  <div class="friend-card-row">
+                    <div class="fcard-avatar-wrap">
+                      <div class="fcard-avatar">
+                        <span>${friend.avatar || '👤'}</span>
+                      </div>
+                      <div class="fcard-level-star">
+                        <span>⭐</span>
+                        <span class="star-num">${friend.level || 1}</span>
+                      </div>
+                    </div>
+
+                    <div class="fcard-info">
+                      <span class="fcard-name">${friend.nickName || friend.name || 'Friend'}</span>
+                    </div>
+
+                    <div class="fcard-actions">
+                      <button class="btn-fcard-gift" data-friend-id="${friend.id}" title="Send Free Coins Gift">
+                        🎁
+                      </button>
+
+                      <button class="btn-glossy-green btn-fcard-challenge" data-friend-name="${friend.nickName || friend.name}" data-friend-id="${friend.id}">
+                        ⚔️ Challenge
+                      </button>
+
+                      ${isEditing ? `
+                        <button class="btn-fcard-delete" data-friend-id="${friend.id}" title="Delete Friend">
+                          🗑️
+                        </button>
+                      ` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `}
         </div>
 
         <!-- Bottom Navigation Bar (Matching App Theme) -->

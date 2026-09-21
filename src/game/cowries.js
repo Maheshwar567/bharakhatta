@@ -5,8 +5,8 @@ export const SCORE_NAMES = {
   2: { te: "Rendu", en: "Two", isBonus: false, releasesCoins: 0 },
   3: { te: "Moodu", en: "Three", isBonus: false, releasesCoins: 0 },
   4: { te: "Naalugu", en: "Four", isBonus: false, releasesCoins: 0 },
-  5: { te: "Aidu", en: "Five", isBonus: true, releasesCoins: 0 },
-  6: { te: "Aaru", en: "Six", isBonus: true, releasesCoins: 0 },
+  5: { te: "Aidu", en: "Five", isBonus: true, releasesCoins: 1 },
+  6: { te: "Aaru", en: "Six", isBonus: true, releasesCoins: 1 },
   12: { te: "Baara", en: "Twelve (Baara!)", isBonus: true, releasesCoins: 0 }
 };
 
@@ -82,12 +82,11 @@ export class CowrieDice {
     };
   }
 
-  // Alternative standard single 6-sided die roll
   rollDie() {
     const score = Math.floor(Math.random() * 6) + 1;
     const isBonus = score === 1 || score === 5 || score === 6;
-    const releasesCoins = score === 1 ? 1 : 0;
     const info = SCORE_NAMES[score];
+    const releasesCoins = info ? info.releasesCoins : (score === 1 || score === 5 || score === 6 ? 1 : 0);
 
     return {
       score,

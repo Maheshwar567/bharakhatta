@@ -160,6 +160,8 @@ export const TRANSLATIONS = {
     errInvalidMobile: "Please enter a valid 10-digit mobile number.",
 
     // Modern Home Menu
+    menuOnline: "Play Online",
+    menuOnlineSub: "Match with Random Online Player",
     menuComputer: "Computer",
     menuFriends: "Friends",
     menuComputerSub: "100% Offline • No internet needed",
@@ -301,6 +303,8 @@ export const TRANSLATIONS = {
     errInvalidMobile: "దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.",
 
     // Modern Home Menu (Telugu)
+    menuOnline: "ఆన్‌లైన్ ఆట",
+    menuOnlineSub: "యాదృచ్ఛిక ఆటగాడితో మ్యాచ్",
     menuComputer: "కంప్యూటర్",
     menuFriends: "మిత్రులు",
     menuComputerSub: "100% ఆఫ్‌లైన్ • ఇంటర్నెట్ అవసరం లేదు",

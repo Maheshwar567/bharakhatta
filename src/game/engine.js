@@ -14,6 +14,7 @@ export const GAME_STATUS = {
   NOT_STARTED: "NOT_STARTED",
   WAITING_FOR_ROLL: "WAITING_FOR_ROLL",
   ROLLING: "ROLLING",
+  CHOOSING_HOME: "CHOOSING_HOME",
   WAITING_FOR_MOVE: "WAITING_FOR_MOVE",
   ANIMATING_MOVE: "ANIMATING_MOVE",
   GAME_OVER: "GAME_OVER"
@@ -30,13 +31,17 @@ export class BharakhattaEngine {
     // Guaranteed Opposite Homes Rule:
     // Whoever got 1st home (team1Home), the opposing team (team2Home) MUST ALWAYS default get the opposite home!
     // 1 (East) <-> 3 (West) | 2 (North) <-> 4 (South)
+    this.homesAssigned = options.homesAssigned !== undefined ? options.homesAssigned : false;
     this.team1Home = options.team1Home ? parseInt(options.team1Home, 10) : 1;
     this.team2Home = options.team2Home ? parseInt(options.team2Home, 10) : getOppositeHome(this.team1Home);
+    this.pendingReleaseScore = null;
 
     this.onStateChange = options.onStateChange || (() => {});
     this.onLog = options.onLog || (() => {});
     this.onTurnChange = options.onTurnChange || (() => {});
     this.onBothGatesOpen = options.onBothGatesOpen || (() => {});
+    this.onNeedHomeSelection = options.onNeedHomeSelection || null;
+    this.localPlayerId = options.localPlayerId || 1;
     this.isMultiplayer = options.isMultiplayer || false;
     this.isHost = options.isHost !== undefined ? options.isHost : true;
     this.bothGatesPrompted = false;
@@ -55,12 +60,16 @@ export class BharakhattaEngine {
 
   initGame(customPlayers = null, team1Home = null) {
     this.bothGatesPrompted = false;
+    this.pendingReleaseScore = null;
 
-    if (team1Home) {
+    if (team1Home !== null && team1Home !== undefined) {
+      this.homesAssigned = true;
       this.team1Home = parseInt(team1Home, 10) || 1;
       this.team2Home = getOppositeHome(this.team1Home);
     } else {
-      this.team2Home = getOppositeHome(this.team1Home || 1);
+      this.homesAssigned = false;
+      this.team1Home = 1;
+      this.team2Home = 3;
     }
 
     // 2p Mode: Player 1 (Team 1) vs Player 2 (Team 2)
@@ -204,6 +213,24 @@ export class BharakhattaEngine {
 
     this.log(`🎲 ${player.name} rolled ${rollResult.titleEn} (${score})! ${rollResult.isBonus ? "⭐ Bonus Turn Awarded!" : ""}`);
 
+    // If homes not assigned yet and player rolled a release score (1, 5, or 6):
+    const isReleaseScore = score === 1 || score === 5 || score === 6;
+    if (!this.homesAssigned && isReleaseScore) {
+      const isHuman = !player.isAI && (!this.isMultiplayer || player.id === this.localPlayerId);
+      if (this.onNeedHomeSelection && isHuman) {
+        this.status = GAME_STATUS.CHOOSING_HOME;
+        this.pendingReleaseScore = score;
+        this.emitChange();
+        this.onNeedHomeSelection({ teamId, score, player });
+        return;
+      } else {
+        // AI or default automatically chooses home
+        const defaultChoice = teamId === 2 ? 2 : 1;
+        this.assignHomes(teamId, defaultChoice, score);
+        return;
+      }
+    }
+
     // Compute legal moves
     const moves = this.getLegalMoves(teamId, score);
     this.validMoves = moves;
@@ -251,8 +278,9 @@ export class BharakhattaEngine {
     const jailCoins = this.getJailCoins(teamId);
     const path = this.getTeamPath(teamId);
 
-    // Rule: Can release from jail ONLY on roll of 1 (Okkati), releasing exactly 1 coin
-    const canReleaseFromJail = (score === 1) && jailCoins.length > 0;
+    // Rule: Can release from jail on roll of 1 (Okkati), 5 (Aidu), or 6 (Aaru)
+    const isReleaseRoll = score === 1 || score === 5 || score === 6;
+    const canReleaseFromJail = isReleaseRoll && jailCoins.length > 0;
 
     if (canReleaseFromJail) {
       moves.push({
@@ -412,7 +440,7 @@ export class BharakhattaEngine {
             victims.forEach(v => {
               v.inJail = true;
               v.stepIndex = -1;
-              v.coord = { ...(v.team === 1 ? JAIL_COORDS.team1 : JAIL_COORDS.team2) };
+              v.coord = { ...(v.team === 1 ? (JAIL_COORDS[this.team1Home] || JAIL_COORDS.team1) : (JAIL_COORDS[this.team2Home] || JAIL_COORDS.team2)) };
               this.log(`💥 Katta! ${player.name} killed Team ${opponentTeam}'s Coin #${v.num}! Returned to Jail.`);
             });
 
@@ -670,6 +698,48 @@ export class BharakhattaEngine {
     this.emitChange();
   }
 
+  // Dynamic Home Selection: Player picks home on first 1/5/6 release; opponent defaults to opposite home
+  assignHomes(teamId, chosenHome, resumeScore = null) {
+    const home = parseInt(chosenHome, 10) || 1;
+    const oppHome = getOppositeHome(home);
+    const tId = parseInt(teamId, 10) || 1;
+
+    if (tId === 1) {
+      this.team1Home = home;
+      this.team2Home = oppHome;
+    } else {
+      this.team2Home = home;
+      this.team1Home = oppHome;
+    }
+    this.homesAssigned = true;
+
+    // Reposition all coins in jail to the assigned home base coords
+    const t1Coord = JAIL_COORDS[this.team1Home] || JAIL_COORDS.team1;
+    const t2Coord = JAIL_COORDS[this.team2Home] || JAIL_COORDS.team2;
+    for (const coin of this.coins) {
+      if (coin.inJail) {
+        coin.coord = { ...(coin.team === 1 ? t1Coord : t2Coord) };
+      }
+    }
+
+    const tName = tId === 1 ? "Team 1" : "Team 2";
+    const oppTName = tId === 1 ? "Team 2" : "Team 1";
+    this.log(`🏠 ${tName} selected Home ${home}! ${oppTName} automatically assigned Opposite Home ${oppHome}.`);
+
+    const scoreToProcess = resumeScore || this.pendingReleaseScore;
+    this.pendingReleaseScore = null;
+
+    if (scoreToProcess) {
+      this.status = GAME_STATUS.WAITING_FOR_MOVE;
+      this.validMoves = this.getLegalMoves(tId, scoreToProcess);
+      this.emitChange();
+      this.checkAITurn();
+    } else {
+      this.status = GAME_STATUS.WAITING_FOR_MOVE;
+      this.emitChange();
+    }
+  }
+
   log(msg) {
     if (this.onLog) {
       this.onLog({
@@ -693,6 +763,7 @@ export class BharakhattaEngine {
       diceMode: this.diceMode,
       pathStyle: this.pathStyle,
       requireKill: this.requireKill,
+      homesAssigned: this.homesAssigned,
       team1Home: this.team1Home,
       team2Home: this.team2Home,
       players: this.players,
@@ -712,6 +783,7 @@ export class BharakhattaEngine {
     if (!snapshot) return;
     this.status = snapshot.status;
     this.gameMode = snapshot.gameMode || this.gameMode;
+    if (snapshot.homesAssigned !== undefined) this.homesAssigned = snapshot.homesAssigned;
     if (snapshot.team1Home !== undefined) this.team1Home = snapshot.team1Home;
     if (snapshot.team2Home !== undefined) this.team2Home = snapshot.team2Home;
     if (snapshot.players && Array.isArray(snapshot.players)) {

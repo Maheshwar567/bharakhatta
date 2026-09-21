@@ -18,6 +18,8 @@ export function setupMultiplayerServer(httpServer) {
 
   let serverCounter = 100;
   const issuedCodes = new Set();
+  const matchmakingQueue = [];
+
 
   function generateRoomCode() {
     const now = new Date();
@@ -51,6 +53,112 @@ export function setupMultiplayerServer(httpServer) {
       try {
         const msg = JSON.parse(raw.toString());
         const { type } = msg;
+
+        // Quick Online Matchmaking (Play Online)
+        if (type === "FIND_MATCH") {
+          const playerName = msg.playerName || "Player";
+          const userMeta = msg.userMeta || null;
+          const mode = msg.mode || "2p";
+
+          // Remove disconnected sockets or self from queue
+          const validQueue = matchmakingQueue.filter(entry => entry.ws.readyState === 1 && entry.ws !== ws);
+          matchmakingQueue.length = 0;
+          matchmakingQueue.push(...validQueue);
+
+          if (matchmakingQueue.length > 0) {
+            const opponent = matchmakingQueue.shift();
+            const roomCode = generateRoomCode();
+
+            const player1 = {
+              id: 1,
+              team: 1,
+              name: opponent.playerName,
+              isHost: true,
+              userMeta: opponent.userMeta,
+              ws: opponent.ws
+            };
+
+            const player2 = {
+              id: 2,
+              team: 2,
+              name: playerName,
+              isHost: false,
+              userMeta,
+              ws
+            };
+
+            const room = {
+              code: roomCode,
+              mode: "2p",
+              homesAssigned: false,
+              team1Home: null,
+              team2Home: null,
+              players: [player1, player2],
+              createdAt: Date.now()
+            };
+
+            rooms.set(roomCode, room);
+            const upperCode = roomCode.toUpperCase().replace(/\s+/g, "");
+            rooms.set(upperCode, room);
+            if (upperCode.startsWith("BK-")) {
+              rooms.set(upperCode.replace(/^BK-/, ""), room);
+            } else {
+              rooms.set(`BK-${upperCode}`, room);
+            }
+
+            opponent.setRoomInfo(roomCode, 1);
+            currentRoomCode = roomCode;
+            currentPlayerId = 2;
+
+            const playerSummary = [
+              { id: 1, team: 1, name: player1.name, isHost: true, userMeta: player1.userMeta },
+              { id: 2, team: 2, name: player2.name, isHost: false, userMeta: player2.userMeta }
+            ];
+
+            opponent.ws.send(JSON.stringify({
+              type: "ROOM_CREATED",
+              roomCode,
+              playerId: 1,
+              team: 1,
+              mode: "2p",
+              isMatchmaking: true,
+              players: playerSummary
+            }));
+
+            ws.send(JSON.stringify({
+              type: "ROOM_JOINED",
+              roomCode,
+              playerId: 2,
+              team: 2,
+              mode: "2p",
+              isMatchmaking: true,
+              players: playerSummary,
+              hostMobile: opponent.userMeta?.mobile || null,
+              hostNick: opponent.userMeta?.nickName || opponent.playerName,
+              hostFullName: opponent.userMeta?.fullName || opponent.playerName
+            }));
+            return;
+          } else {
+            matchmakingQueue.push({
+              ws,
+              playerName,
+              userMeta,
+              mode,
+              setRoomInfo: (rc, pid) => {
+                currentRoomCode = rc;
+                currentPlayerId = pid;
+              }
+            });
+            ws.send(JSON.stringify({ type: "MATCH_WAITING", timeoutSeconds: 4 }));
+            return;
+          }
+        }
+
+        if (type === "CANCEL_FIND_MATCH") {
+          const idx = matchmakingQueue.findIndex(e => e.ws === ws);
+          if (idx !== -1) matchmakingQueue.splice(idx, 1);
+          return;
+        }
 
         if (type === "CREATE_ROOM") {
           const roomCode = (msg.roomCode && String(msg.roomCode).trim())
@@ -207,10 +315,23 @@ export function setupMultiplayerServer(httpServer) {
         }
 
         // Forward gameplay actions to room peers
-        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "SYNC_GAME_STATE" || type === "GATE_23_DECISION" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR" || type === "ACTION_FORFEIT") {
+        if (type === "ACTION_ROLL" || type === "ACTION_MOVE" || type === "ACTION_RESTART" || type === "SYNC_STATE" || type === "SYNC_GAME_STATE" || type === "GATE_23_DECISION" || type === "ACTION_CHAT" || type === "ROOM_BET" || type === "ACTION_TIMEOUT_PASS" || type === "START_4P_AI_PAIR" || type === "ACTION_FORFEIT" || type === "ACTION_SELECT_HOME") {
           if (!currentRoomCode) return;
           const room = rooms.get(currentRoomCode);
           if (!room) return;
+
+          if (type === "ACTION_SELECT_HOME") {
+            const chosen = parseInt(msg.chosenHome, 10) || 1;
+            const opp = getOppositeHome(chosen);
+            if (msg.teamId === 1) {
+              room.team1Home = chosen;
+              room.team2Home = opp;
+            } else {
+              room.team2Home = chosen;
+              room.team1Home = opp;
+            }
+            room.homesAssigned = true;
+          }
 
           broadcast(room, msg, ws);
           return;
@@ -221,6 +342,10 @@ export function setupMultiplayerServer(httpServer) {
     });
 
     ws.on("close", () => {
+      // Remove from matchmaking queue if present
+      const qIdx = matchmakingQueue.findIndex(e => e.ws === ws);
+      if (qIdx !== -1) matchmakingQueue.splice(qIdx, 1);
+
       if (currentRoomCode && rooms.has(currentRoomCode)) {
         const room = rooms.get(currentRoomCode);
         room.players = room.players.filter(p => p.ws !== ws);

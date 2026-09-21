@@ -53,10 +53,10 @@ function runTests() {
   assert(roll4.score === 4 && roll4.isBonus === false && roll4.releasesCoins === 0, "Roll 4 is Naalugu, no bonus, no release");
 
   const roll5 = dice.roll(5);
-  assert(roll5.score === 5 && roll5.isBonus === true && roll5.releasesCoins === 0, "Roll 5 is Aidu, grants bonus, releases 0 coins");
+  assert(roll5.score === 5 && roll5.isBonus === true && roll5.releasesCoins === 1, "Roll 5 is Aidu, grants bonus and releases 1 coin");
 
   const roll6 = dice.roll(6);
-  assert(roll6.score === 6 && roll6.isBonus === true && roll6.releasesCoins === 0, "Roll 6 is Aaru, grants bonus, releases 0 coins");
+  assert(roll6.score === 6 && roll6.isBonus === true && roll6.releasesCoins === 1, "Roll 6 is Aaru, grants bonus and releases 1 coin");
 
   const roll12 = dice.roll(12);
   assert(roll12.score === 12 && roll12.isBonus === true && roll12.releasesCoins === 0, "Roll 12 (all backs) is Baara!, grants bonus, releases 0 coins");
@@ -109,15 +109,28 @@ function runTests() {
   const movesRoll3 = engine.getLegalMoves(1, 3);
   assert(movesRoll3.length === 0, "Roll of 3 with all coins in jail gives 0 legal moves");
 
-  // Roll 5 should NOT allow releasing coins from jail (User explicit rule: only roll 1 releases!)
+  // Rolls 1, 5, and 6 allow releasing coins from jail per latest rules
   const movesRoll5 = engine.getLegalMoves(1, 5);
-  assert(movesRoll5.length === 0, "Roll of 5 with all coins in jail gives 0 legal moves (does NOT release from jail)");
+  assert(movesRoll5.length === 1 && movesRoll5[0].type === "RELEASE_JAIL", "Roll of 5 with all coins in jail gives RELEASE_JAIL move");
+
+  const movesRoll6 = engine.getLegalMoves(1, 6);
+  assert(movesRoll6.length === 1 && movesRoll6[0].type === "RELEASE_JAIL", "Roll of 6 with all coins in jail gives RELEASE_JAIL move");
 
   // Roll 1 should allow releasing exactly 1 coin
   const movesRoll1 = engine.getLegalMoves(1, 1);
   assert(movesRoll1.length === 1 && movesRoll1[0].type === "RELEASE_JAIL" && movesRoll1[0].count === 1, "Roll of 1 allows releasing 1 coin from jail");
 
-  // Simulate resolving a roll of 1
+  // Dynamic Home Selection Test:
+  const dynamicEngine = new BharakhattaEngine({ gameMode: "2p" });
+  dynamicEngine.initGame(null, null);
+  assert(dynamicEngine.homesAssigned === false, "Game starts in neutral state with homesAssigned = false");
+  dynamicEngine.assignHomes(1, 2);
+  assert(dynamicEngine.homesAssigned === true, "homesAssigned is true after selection");
+  assert(dynamicEngine.team1Home === 2, "Team 1 is assigned Home 2 (North)");
+  assert(dynamicEngine.team2Home === 4, "Team 2 is automatically assigned opposite Home 4 (South)");
+
+  // Simulate resolving a roll of 1 on engine (which initialized with team1Home=1)
+  engine.assignHomes(1, 1);
   engine.currentRoll = { score: 1, isBonus: true };
   engine.status = GAME_STATUS.WAITING_FOR_MOVE;
   engine.executeMove(movesRoll1[0]);

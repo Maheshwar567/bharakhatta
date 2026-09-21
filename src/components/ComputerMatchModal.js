@@ -23,7 +23,7 @@ export function renderComputerMatchModal(isOpenOrOptions = false, options = {}) 
   const pot = selectedBet * 2;
 
   return `
-    <div class="modal-backdrop" id="computer-match-backdrop">
+    <div class="modal-backdrop computer-match-backdrop" id="computer-match-backdrop">
       <div class="modal-dialog modal-computer-match">
         <div class="modal-header computer-match-header">
           <div class="cm-title-wrap">
@@ -100,46 +100,8 @@ export function renderComputerMatchModal(isOpenOrOptions = false, options = {}) 
             </div>
           </div>
 
-          <!-- 3. Choose Starting Home (Opposite Home Guaranteed) -->
-          <div class="cm-section">
-            <div class="cm-section-header-row">
-              <label class="cm-section-label">3. Choose Your Starting Home</label>
-              <span class="cm-opposite-hint">Opponent gets Opposite Home</span>
-            </div>
-            <div class="cm-homes-grid">
-              <button type="button" class="btn-cm-home ${selectedHome === 1 ? 'home-active' : ''}" data-cm-home="1">
-                <span class="cm-home-badge">H1</span>
-                <div class="cm-home-info">
-                  <strong>Home 1 (East)</strong>
-                  <span>Opponent: Home 3 (West)</span>
-                </div>
-                ${selectedHome === 1 ? '<span class="format-check">✔</span>' : ''}
-              </button>
-              <button type="button" class="btn-cm-home ${selectedHome === 4 ? 'home-active' : ''}" data-cm-home="4">
-                <span class="cm-home-badge">H4</span>
-                <div class="cm-home-info">
-                  <strong>Home 4 (South)</strong>
-                  <span>Opponent: Home 2 (North)</span>
-                </div>
-                ${selectedHome === 4 ? '<span class="format-check">✔</span>' : ''}
-              </button>
-              <button type="button" class="btn-cm-home ${selectedHome === 2 ? 'home-active' : ''}" data-cm-home="2">
-                <span class="cm-home-badge">H2</span>
-                <div class="cm-home-info">
-                  <strong>Home 2 (North)</strong>
-                  <span>Opponent: Home 4 (South)</span>
-                </div>
-                ${selectedHome === 2 ? '<span class="format-check">✔</span>' : ''}
-              </button>
-              <button type="button" class="btn-cm-home ${selectedHome === 3 ? 'home-active' : ''}" data-cm-home="3">
-                <span class="cm-home-badge">H3</span>
-                <div class="cm-home-info">
-                  <strong>Home 3 (West)</strong>
-                  <span>Opponent: Home 1 (East)</span>
-                </div>
-                ${selectedHome === 3 ? '<span class="format-check">✔</span>' : ''}
-              </button>
-            </div>
+          <div class="cm-rules-hint-card">
+            <span>💡 <strong>Village Rules</strong>: Starting homes are unlocked on your first roll of <strong>1, 5, or 6</strong>. Opponent automatically gets the opposite home base!</span>
           </div>
         </div>
 

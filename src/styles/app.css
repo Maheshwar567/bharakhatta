@@ -5314,6 +5314,65 @@ body {
   pointer-events: none;
 }
 
+/* Green 3D Button (Play Online - Quick Matchmaking) */
+.btn-mode-green {
+  background: linear-gradient(180deg, #2ecc71 0%, #27ae60 50%, #16a085 100%);
+  border: 3.5px solid #a8e6cf;
+  box-shadow: 0 8px 0 #1b633e, 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+.green-icon-box {
+  position: relative;
+  width: 50px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.green-icon-box .device-icon {
+  font-size: 26px;
+}
+
+.green-icon-box .vs-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #f39c12;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.btn-mode-green .btn-3d-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  margin: 0;
+}
+
+.btn-mode-green .btn-3d-desc {
+  font-size: 9px;
+  font-weight: 700;
+  color: #d4efdf;
+}
+
+.pill-online {
+  background: #27ae60;
+  color: #fff;
+  border: 0.5px solid #a8e6cf;
+}
+
 /* Yellow 3D Button (Computer - Matching screenshot) */
 .btn-mode-yellow {
   background: linear-gradient(180deg, #ffd32a 0%, #ffa801 50%, #ff5e57 100%);
@@ -5512,5 +5571,144 @@ body {
   padding: 4px 10px;
   cursor: pointer;
 }
+
+/* Dynamic Starting Home Selection Dialog (First 1/5/6 Roll) */
+.home-picker-backdrop {
+  z-index: 2600 !important;
+}
+
+.home-picker-dialog {
+  max-width: 360px;
+  width: 90%;
+  background: linear-gradient(135deg, #2b1810 0%, #150a06 100%);
+  border: 2px solid #f39c12;
+  border-radius: 20px;
+  padding: 18px 16px;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(243, 156, 18, 0.3);
+  text-align: center;
+  animation: modalScaleIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.home-picker-header .picker-trophy {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.picker-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffd700;
+  margin: 0 0 6px 0;
+}
+
+.picker-subtitle {
+  font-size: 12px;
+  color: #d1b8a5;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.picker-homes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-picker-home {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(243, 156, 18, 0.35);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.btn-picker-home:hover {
+  background: rgba(243, 156, 18, 0.18);
+  border-color: #ffd700;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+}
+
+.btn-picker-home:active {
+  transform: scale(0.98);
+}
+
+.picker-home-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f39c12, #d35400);
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+
+.picker-home-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.picker-home-details strong {
+  font-size: 14px;
+  color: #ffd700;
+}
+
+.picker-home-details span {
+  font-size: 10.5px;
+  color: #c5b29c;
+}
+
+.picker-arrow {
+  color: #f39c12;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.cm-rules-hint-card {
+  background: rgba(243, 156, 18, 0.1);
+  border: 1px dashed rgba(243, 156, 18, 0.4);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
+.cm-rules-hint-card p {
+  margin: 0;
+  font-size: 11px;
+  color: #f5eedc;
+  line-height: 1.4;
+}
+
+.online-searching-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.5);
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: #2ecc71;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 8px 0;
+  animation: pulseLive 1.2s infinite alternate;
+}
+
 
 

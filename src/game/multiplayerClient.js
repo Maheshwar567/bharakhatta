@@ -148,6 +148,8 @@ export class MultiplayerClient {
     this.onSyncGameState = options.onSyncGameState || (() => {});
     this.onGate23Decision = options.onGate23Decision || (() => {});
     this.onForfeit = options.onForfeit || (() => {});
+    this.onHomeSelected = options.onHomeSelected || (() => {});
+    this.onMatchWaiting = options.onMatchWaiting || (() => {});
     this.onError = options.onError || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
     this.currentBet = 250;
@@ -281,10 +283,47 @@ export class MultiplayerClient {
         this.onGate23Decision(msg.decision);
         break;
 
+      case "ACTION_SELECT_HOME":
+        if (this.onHomeSelected) this.onHomeSelected(msg);
+        break;
+
+      case "MATCH_WAITING":
+        if (this.onMatchWaiting) this.onMatchWaiting(msg);
+        break;
+
       case "ERROR":
         this.onError(msg.message);
         break;
     }
+  }
+
+  sendHomeSelection(teamId, chosenHome) {
+    this.send({
+      type: "ACTION_SELECT_HOME",
+      roomCode: this.roomCode,
+      teamId,
+      chosenHome
+    });
+  }
+
+  async findOnlineMatch(playerName = "Player", userMeta = null) {
+    try {
+      await this.connectWS();
+      this.send({
+        type: "FIND_MATCH",
+        playerName,
+        userMeta,
+        mode: "2p"
+      });
+      return true;
+    } catch (err) {
+      console.warn("WS not reachable for online matchmaking:", err);
+      return false;
+    }
+  }
+
+  cancelFindMatch() {
+    this.send({ type: "CANCEL_FIND_MATCH" });
   }
 
   sendForfeit(quittingTeam, playerId = null) {

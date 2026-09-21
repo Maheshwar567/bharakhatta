@@ -22,6 +22,7 @@ import { renderExitConfirmModal, renderInactivityModal } from "./components/Exit
 import { renderGatePromptModal } from "./components/GatePromptModal.js";
 import { renderLobbyView } from "./components/LobbyView.js";
 import { renderFriendsHubModal } from "./components/FriendsHubModal.js";
+import { renderHomePickerModal } from "./components/HomePickerModal.js";
 import { renderCreateRoomModal, renderJoinRoomModal, renderAddFriendModal, renderCelebrationSplash } from "./components/RoomCodeModal.js";
 import { renderMatchHistoryModal } from "./components/MatchHistoryModal.js";
 import { TurnTimer } from "./game/turnTimer.js";
@@ -60,7 +61,7 @@ class BharakhattaApp {
 
     // Friends Hub & 4-Digit Room Codes (Matching user screenshot)
     this.friendsHubOpen = false;
-    this.friendsTab = "challenge";
+    this.friendsTab = "create";
     this.friendsSearchQuery = "";
     this.isEditingFriends = false;
     this.createRoomModalOpen = false;
@@ -73,6 +74,12 @@ class BharakhattaApp {
     this.addFriendError = null;
     this.roomCreationMode = "2p";
     this.current4DigitCode = generateUnique4DigitTableCode();
+
+    // Dynamic Starting Home Selection & Online Matchmaking
+    this.homePickerOpen = false;
+    this.homePickerData = null;
+    this.isSearchingOnlineMatch = false;
+    this.onlineFallbackTimer = null;
 
     // 1-second ticker for hourly reward countdown and live timers
     this.hourlyTicker = setInterval(() => {
@@ -158,6 +165,7 @@ class BharakhattaApp {
       onStart4pAIPair: (msg) => this.handleStart4pAIPair(msg),
       onSyncGameState: (state) => this.handleRemoteGameState(state),
       onGate23Decision: (decision) => this.handleRemoteGate23Decision(decision),
+      onHomeSelected: (msg) => this.handleHomeSelected(msg),
       onError: (msg) => {
         this.mpState.errorMsg = msg;
         this.render();
@@ -185,7 +193,8 @@ class BharakhattaApp {
       },
       onLog: (entry) => this.addLog(entry),
       onTurnChange: (player) => this.handleTurnChange(player),
-      onBothGatesOpen: () => this.handleBothGatesOpen()
+      onBothGatesOpen: () => this.handleBothGatesOpen(),
+      onNeedHomeSelection: (data) => this.handleNeedHomeSelection(data)
     });
 
     this.bindGlobalKeys();
@@ -249,16 +258,116 @@ class BharakhattaApp {
     }
 
     // Solo Mode vs System AI:
+    this.mpState.roomCode = null;
+    this.mpState.myPlayerId = null;
+    this.mpState.myTeam = null;
+    this.mpState.isHost = false;
+    this.mpState.players = [];
+    if (this.mpClient) {
+      this.mpClient.roomCode = null;
+      this.mpClient.myPlayerId = null;
+      this.mpClient.myTeam = null;
+    }
+
     this.engine.gameMode = "2p";
     this.engine.initGame([
       { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
       { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
-    ], this.selectedHome);
+    ], null);
     this.winnerAwarded = false;
     this.turnTimer.start();
     this.engine.log(`🎲 2-Player Game started vs System AI! Stake: 🪙${bet.toLocaleString()} | Winner Pot: 🪙${this.matchPot.toLocaleString()}`);
     this.render();
     return true;
+  }
+
+  handleNeedHomeSelection(data) {
+    this.homePickerOpen = true;
+    this.homePickerData = data;
+    this.render();
+  }
+
+  handleHomeSelected(msg) {
+    if (this.engine) {
+      this.engine.assignHomes(msg.teamId, msg.chosenHome);
+      this.homePickerOpen = false;
+      this.homePickerData = null;
+      this.render();
+    }
+  }
+
+  async startOnlineQuickMatch() {
+    const bet = 250;
+    if (!wallet.canAfford(bet)) {
+      alert(`You need 🪙${bet.toLocaleString()} coins for Online Matchmaking! Current balance: 🪙${wallet.getBalance().toLocaleString()}`);
+      return;
+    }
+
+    const user = userManager.getCurrentUser();
+    const myName = user ? (user.nickName || user.name) : "Player";
+    const userMeta = {
+      mobile: user?.mobile || "",
+      nickName: user?.nickName || myName,
+      fullName: user?.name || myName
+    };
+
+    this.isSearchingOnlineMatch = true;
+    this.addLog("🌐 Searching for an online player... (4s quick match)");
+    this.render();
+
+    if (this.onlineFallbackTimer) {
+      clearTimeout(this.onlineFallbackTimer);
+      this.onlineFallbackTimer = null;
+    }
+
+    // 4-second quick matchmaking fallback to online AI bot
+    this.onlineFallbackTimer = setTimeout(() => {
+      if (this.isSearchingOnlineMatch) {
+        this.isSearchingOnlineMatch = false;
+        this.mpClient.cancelFindMatch();
+        this.onlineFallbackTimer = null;
+
+        // Instant match with online AI player
+        wallet.placeBet(bet);
+        this.currentBet = bet;
+        this.matchPot = bet * 2;
+        this.inLobby = false;
+        this.mpState.roomCode = null;
+        this.mpState.myPlayerId = null;
+        this.mpState.myTeam = null;
+        this.mpState.isHost = false;
+        this.mpState.players = [];
+        if (this.mpClient) {
+          this.mpClient.roomCode = null;
+          this.mpClient.myPlayerId = null;
+          this.mpClient.myTeam = null;
+        }
+
+        const botNames = [
+          { name: "Arjun (Online)", avatar: "⚡" },
+          { name: "Priya (Online)", avatar: "🌸" },
+          { name: "Vikram (Online)", avatar: "🛡️" },
+          { name: "Sneha (Online)", avatar: "💎" }
+        ];
+        const bot = botNames[Math.floor(Math.random() * botNames.length)];
+
+        this.engine.gameMode = "2p";
+        this.engine.initGame([
+          { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
+          { id: 2, team: 2, name: `${bot.name}`, avatar: bot.avatar, color: "#27ae60", isAI: true }
+        ], null);
+        this.winnerAwarded = false;
+        this.turnTimer.start();
+        this.engine.log(`🎲 Matched with ${bot.name}! 1v1 Online Match started. Stake: 🪙${bet.toLocaleString()} | Pot: 🪙${this.matchPot.toLocaleString()}`);
+        this.render();
+      }
+    }, 4000);
+
+    try {
+      await this.mpClient.findOnlineMatch(myName, userMeta);
+    } catch (e) {
+      console.warn("Online match find failed:", e);
+    }
   }
 
   async checkUrlRoomParam() {
@@ -549,6 +658,12 @@ class BharakhattaApp {
   }
 
   async handleRoomCreated(data) {
+    if (this.onlineFallbackTimer) {
+      clearTimeout(this.onlineFallbackTimer);
+      this.onlineFallbackTimer = null;
+    }
+    this.isSearchingOnlineMatch = false;
+
     this.mpState.roomCode = data.roomCode;
     this.mpState.myPlayerId = data.playerId;
     this.mpState.myTeam = data.team;
@@ -567,19 +682,34 @@ class BharakhattaApp {
     const myName = user ? (user.nickName || user.name) : "Player 1";
     const players = [
       { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
-      { id: 2, team: 2, name: "Player 2 (Friend)", avatar: "🦚", color: "#27ae60", isAI: false }
+      { id: 2, team: 2, name: data.isMatchmaking ? "Online Player" : "Player 2 (Friend)", avatar: "🦚", color: "#27ae60", isAI: false }
     ];
-    const team1Home = data.team1Home || this.selectedHome || 1;
+    const team1Home = data.team1Home || null;
     this.engine.initGame(players, team1Home);
     this.turnTimer.start();
 
-    const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
-    this.roomQrDataUrl = await generateMobileQr(shareUrl);
-    this.engine.log(`🏠 Created Room #${data.roomCode} (Bet 🪙${this.currentBet}). Share code with friend!`);
+    if (data.isMatchmaking) {
+      this.inLobby = false;
+      this.friendsHubOpen = false;
+      this.createRoomModalOpen = false;
+      this.joinRoomModalOpen = false;
+      this.mpModalOpen = false;
+      this.engine.log(`⚡ Online match started on Board #${data.roomCode}!`);
+    } else {
+      const shareUrl = `${this.baseMobileUrl}?room=${data.roomCode}`;
+      this.roomQrDataUrl = await generateMobileQr(shareUrl);
+      this.engine.log(`🏠 Created Room #${data.roomCode} (Bet 🪙${this.currentBet}). Share code with friend!`);
+    }
     this.render();
   }
 
   async handleRoomJoined(data) {
+    if (this.onlineFallbackTimer) {
+      clearTimeout(this.onlineFallbackTimer);
+      this.onlineFallbackTimer = null;
+    }
+    this.isSearchingOnlineMatch = false;
+
     this.mpState.roomCode = data.roomCode;
     this.mpState.myPlayerId = data.playerId;
     this.mpState.myTeam = data.team;
@@ -600,10 +730,10 @@ class BharakhattaApp {
     const user = userManager.getCurrentUser();
     const myName = user ? (user.nickName || user.name) : "Player 2";
     const players = [
-      { id: 1, team: 1, name: "Player 1 (Friend)", avatar: "👑", color: "#e67e22", isAI: false },
+      { id: 1, team: 1, name: data.isMatchmaking ? "Online Player" : "Player 1 (Friend)", avatar: "👑", color: "#e67e22", isAI: false },
       { id: 2, team: 2, name: `${myName} (You)`, avatar: "🦚", color: "#27ae60", isAI: false }
     ];
-    const guestTeam1Home = data.team1Home || 1;
+    const guestTeam1Home = data.team1Home || null;
     this.engine.initGame(players, guestTeam1Home);
     this.turnTimer.start();
 
@@ -843,8 +973,13 @@ class BharakhattaApp {
         selectedBet: this.selectedBet,
         playerCount: this.playerCount,
         selectedMode: this.lobbyMode,
-        hourlyRewardStatus: userManager.getHourlyRewardStatus()
+        hourlyRewardStatus: userManager.getHourlyRewardStatus(),
+        isSearchingOnlineMatch: this.isSearchingOnlineMatch
       });
+    }
+
+    if (this.homePickerOpen && this.homePickerData) {
+      modalsHtml += renderHomePickerModal(true, this.homePickerData);
     }
 
     if (this.computerModalOpen) {
@@ -859,14 +994,22 @@ class BharakhattaApp {
     if (this.friendsHubOpen) {
       const friends = userManager.getFriends(this.friendsSearchQuery);
       const hourlyRewardStatus = userManager.getHourlyRewardStatus();
+      const code = this.mpState.roomCode || this.current4DigitCode;
+      const shareUrl = `${this.baseMobileUrl}?room=${code}`;
       modalsHtml += renderFriendsHubModal({
         isOpen: true,
         friends,
         searchQuery: this.friendsSearchQuery,
         isEditing: this.isEditingFriends,
-        activeTab: this.friendsTab,
+        activeTab: this.friendsTab || 'create',
         walletCoins: wallet.getBalance(),
         diamonds: 385,
+        roomCode: code,
+        roomMode: this.roomCreationMode || '2p',
+        selectedBet: this.currentBet || 250,
+        shareUrl,
+        joinCode: this.enteredJoinCode || '',
+        joinError: this.joinRoomError || null,
         hourlyRewardStatus
       });
     }
@@ -1520,6 +1663,16 @@ class BharakhattaApp {
     const btnModeComputer = document.getElementById("btn-mode-computer");
     if (btnModeComputer) {
       btnModeComputer.onclick = () => {
+        this.mpState.roomCode = null;
+        this.mpState.myPlayerId = null;
+        this.mpState.myTeam = null;
+        this.mpState.isHost = false;
+        this.mpState.players = [];
+        if (this.mpClient) {
+          this.mpClient.roomCode = null;
+          this.mpClient.myPlayerId = null;
+          this.mpClient.myTeam = null;
+        }
         this.computerModalOpen = true;
         this.render();
       };
@@ -1528,24 +1681,26 @@ class BharakhattaApp {
     const btnModeOnline = document.getElementById("btn-mode-online");
     if (btnModeOnline) {
       btnModeOnline.onclick = async () => {
-        this.current4DigitCode = generateUnique4DigitTableCode();
-        const user = userManager.getCurrentUser();
-        const myName = user ? (user.nickName || user.name) : "Player 1";
-        const userMeta = {
-          mobile: user?.mobile || "",
-          nickName: user?.nickName || myName,
-          fullName: user?.name || myName
-        };
-        await this.mpClient.createRoom("2p", myName, this.current4DigitCode, userMeta);
-        this.createRoomModalOpen = true;
-        this.render();
+        await this.startOnlineQuickMatch();
       };
     }
 
     const btnModeFriends = document.getElementById("btn-mode-friends");
     if (btnModeFriends) {
-      btnModeFriends.onclick = () => {
+      btnModeFriends.onclick = async () => {
         this.friendsHubOpen = true;
+        this.friendsTab = "create";
+        if (!this.mpState.roomCode) {
+          this.current4DigitCode = generateUnique4DigitTableCode();
+          const user = userManager.getCurrentUser();
+          const myName = user ? (user.nickName || user.name) : "Player 1";
+          const userMeta = {
+            mobile: user?.mobile || "",
+            nickName: user?.nickName || myName,
+            fullName: user?.name || myName
+          };
+          await this.mpClient.createRoom(this.roomCreationMode || "2p", myName, this.current4DigitCode, userMeta, this.currentBet, null);
+        }
         this.render();
       };
     }
@@ -1557,6 +1712,21 @@ class BharakhattaApp {
         this.render();
       };
     }
+
+    // Dynamic Starting Home Selection (First 1/5/6 Roll)
+    document.querySelectorAll(".btn-picker-home[data-pick-home]").forEach(btn => {
+      btn.onclick = () => {
+        const homeVal = parseInt(btn.getAttribute("data-pick-home"), 10);
+        const teamId = this.homePickerData ? this.homePickerData.teamId : (this.mpState.myTeam || 1);
+        this.engine.assignHomes(teamId, homeVal);
+        if (this.mpState.roomCode && this.mpClient) {
+          this.mpClient.sendHomeSelection(teamId, homeVal);
+        }
+        this.homePickerOpen = false;
+        this.homePickerData = null;
+        this.render();
+      };
+    });
 
     // Computer Match Modal Listeners
     const btnCloseComputerModal = document.getElementById("btn-close-computer-modal");
@@ -1619,6 +1789,18 @@ class BharakhattaApp {
         this.inLobby = false;
         this.computerModalOpen = false;
 
+        // Reset multiplayer state completely so solo gameplay is never blocked
+        this.mpState.roomCode = null;
+        this.mpState.myPlayerId = null;
+        this.mpState.myTeam = null;
+        this.mpState.isHost = false;
+        this.mpState.players = [];
+        if (this.mpClient) {
+          this.mpClient.roomCode = null;
+          this.mpClient.myPlayerId = null;
+          this.mpClient.myTeam = null;
+        }
+
         const user = userManager.getCurrentUser();
         const myName = user ? (user.nickName || user.name) : "Player 1";
 
@@ -1629,7 +1811,7 @@ class BharakhattaApp {
             { id: 2, team: 2, name: "System AI 1", avatar: "🦚", color: "#27ae60", isAI: true },
             { id: 3, team: 1, name: "Teammate AI", avatar: "🦁", color: "#d35400", isAI: true },
             { id: 4, team: 2, name: "System AI 2", avatar: "🦜", color: "#16a085", isAI: true }
-          ], this.selectedHome);
+          ], null);
           this.winnerAwarded = false;
           this.turnTimer.start();
           this.engine.log(`🎲 4-Player Offline match vs System AI Pair started! Pot: 🪙${this.matchPot.toLocaleString()}`);
@@ -1638,10 +1820,10 @@ class BharakhattaApp {
           this.engine.initGame([
             { id: 1, team: 1, name: `${myName} (You)`, avatar: "👑", color: "#e67e22", isAI: false },
             { id: 2, team: 2, name: "System AI (Top)", avatar: "🦚", color: "#27ae60", isAI: true }
-          ], this.selectedHome);
+          ], null);
           this.winnerAwarded = false;
           this.turnTimer.start();
-          this.engine.log(`🎲 2-Player Offline match vs System AI started! Pot: 🪙${this.matchPot.toLocaleString()}`);
+          this.engine.log(`🎲 2-Player Offline match vs System AI started! Stake: 🪙${this.currentBet.toLocaleString()} | Pot: 🪙${this.matchPot.toLocaleString()}`);
         }
         this.render();
       };
@@ -1754,32 +1936,70 @@ class BharakhattaApp {
       };
     }
 
-    // Friends Hub: Create Room Button
-    const btnFhubCreateRoom = document.getElementById("btn-fhub-create-room");
-    if (btnFhubCreateRoom) {
-      btnFhubCreateRoom.onclick = async () => {
-        this.current4DigitCode = generateUnique4DigitTableCode();
+    // Friends Hub Tab 1: Create Table Controls
+    const btnCopy4Digit = document.getElementById("btn-copy-4digit-code");
+    if (btnCopy4Digit) {
+      btnCopy4Digit.onclick = () => {
+        const code = btnCopy4Digit.getAttribute("data-code") || this.current4DigitCode;
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(code);
+        }
+        btnCopy4Digit.textContent = `✅ Copied (${code})!`;
+        setTimeout(() => this.render(), 1500);
+      };
+    }
+
+    document.querySelectorAll("[data-create-bet]").forEach(chip => {
+      chip.onclick = () => {
+        const bet = parseInt(chip.getAttribute("data-create-bet"), 10);
+        if (bet) {
+          this.currentBet = bet;
+          this.render();
+        }
+      };
+    });
+
+    document.querySelectorAll("input[name='create-room-mode']").forEach(radio => {
+      radio.onchange = () => {
+        this.roomCreationMode = radio.value;
+        this.render();
+      };
+    });
+
+    // Friends Hub Tab 2: Join Table Controls
+    const input4Digit = document.getElementById("input-4digit-code");
+    const btnSubmitJoin = document.getElementById("btn-submit-join-code");
+    if (input4Digit) {
+      input4Digit.oninput = (e) => {
+        this.enteredJoinCode = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+      };
+      input4Digit.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          if (btnSubmitJoin) btnSubmitJoin.click();
+        }
+      };
+    }
+    if (btnSubmitJoin) {
+      btnSubmitJoin.onclick = async () => {
+        const code = (this.enteredJoinCode || input4Digit?.value || "").trim();
+        if (!code || code.length < 4) {
+          this.joinRoomError = "Please enter a valid 4-digit code.";
+          this.render();
+          return;
+        }
         const user = userManager.getCurrentUser();
-        const myName = user ? (user.nickName || user.name) : "Player 1";
+        const myName = user ? (user.nickName || user.name) : "Player 2";
         const userMeta = {
           mobile: user?.mobile || "",
           nickName: user?.nickName || myName,
           fullName: user?.name || myName
         };
-        await this.mpClient.createRoom(this.roomCreationMode, myName, this.current4DigitCode, userMeta, this.currentBet, this.selectedHome);
-        this.createRoomModalOpen = true;
-        this.render();
-      };
-    }
-
-    // Friends Hub: Join Room Button
-    const btnFhubJoinRoom = document.getElementById("btn-fhub-join-room");
-    if (btnFhubJoinRoom) {
-      btnFhubJoinRoom.onclick = () => {
-        this.joinRoomModalOpen = true;
-        this.joinRoomError = null;
-        this.enteredJoinCode = "";
-        this.render();
+        try {
+          await this.mpClient.joinRoom(code, myName, userMeta);
+        } catch (err) {
+          this.joinRoomError = err.message || "Failed to join table.";
+          this.render();
+        }
       };
     }
 
